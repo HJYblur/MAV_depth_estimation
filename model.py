@@ -31,7 +31,8 @@ class MobileNetBlock(nn.Module):
         x = self.pointwise(x)
         return x
     
-    
+
+
 class Encoder(nn.Module):
     '''
         Input: N * 4 * H * W (4 = rgb + depth)
@@ -41,44 +42,170 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         self.in_channels = config.config["input_channels"]
         self.conv1 = MobileNetBlock(self.in_channels, 32)
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)  # Add MaxPool2d layer
         self.conv2 = MobileNetBlock(32, 64)
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)  # Add MaxPool2d layer
         self.conv3 = MobileNetBlock(64, 128)
+        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)  # Add MaxPool2d layer
         # The original paper suggests to use 5 layers, but we only use 128->256->512
         self.conv4 = MobileNetBlock(128, 256)
         self.conv5 = MobileNetBlock(256, 512)
         
     def forward(self, x):
+   
         x1 = self.conv1(x)
+    
+        x1 = self.pool1(x1)  
         x2 = self.conv2(x1)
+        x2 = self.pool2(x2)  
         x3 = self.conv3(x2)
+        x3 = self.pool3(x3)  
         x4 = self.conv4(x3)
         x5 = self.conv5(x4)
-        # print(x1.shape, x2.shape, x3.shape, x4.shape, x5.shape)
-        # torch.Size([4, 32, 520, 240]) torch.Size([4, 64, 520, 240]) torch.Size([4, 128, 520, 240]) torch.Size([4, 256, 520, 240]) torch.Size([4, 512, 520, 240])
+        #print(x1.shape, x2.shape, x3.shape, x4.shape, x5.shape) #(rgbd, kernels, w, h)
+        # torch.Size([4, 32, 260, 120]) torch.Size([4, 64, 130, 60]) torch.Size([4, 128, 65, 30]) torch.Size([4, 256, 65, 30]) torch.Size([4, 512, 65, 30])
         return x1, x2, x3, x4, x5
-     
     
+# class Encoder(nn.Module):
+#     '''
+#         Input: N * 4 * H * W (4 = rgb + depth)
+#         Output: N * 512 * H/4 * W/4
+#     '''
+#     def __init__(self):
+#         super(Encoder, self).__init__()
+#         self.in_channels = config.config["input_channels"]
+#         self.conv1 = MobileNetBlock(self.in_channels, 32)
+#         self.conv2 = MobileNetBlock(32, 64)
+#         self.conv3 = MobileNetBlock(64, 128)
+#         # The original paper suggests to use 5 layers, but we only use 128->256->512
+#         self.conv4 = MobileNetBlock(128, 256)
+#         self.conv5 = MobileNetBlock(256, 512)
+        
+#     def forward(self, x):
+#         x1 = self.conv1(x)
+#         x2 = self.conv2(x1)
+#         x3 = self.conv3(x2)
+#         x4 = self.conv4(x3)
+#         x5 = self.conv5(x4)
+#         # print(x1.shape, x2.shape, x3.shape, x4.shape, x5.shape)
+#         # torch.Size([4, 32, 520, 240]) torch.Size([4, 64, 520, 240]) torch.Size([4, 128, 520, 240]) torch.Size([4, 256, 520, 240]) torch.Size([4, 512, 520, 240])
+#         return x1, x2, x3, x4, x5
+
+
+import torch.nn.functional as F  # Ensure this is imported
+
 class Decoder(nn.Module):
-    '''
-        Input: 5 layers of features from Encoder
-        Output: N * 1 (depth) * H * W
-    '''
     def __init__(self):
         super(Decoder, self).__init__()
         self.out_channels = config.config["output_channels"]
         
-        self.conv1 = MobileNetBlock(512, 256)
-        self.conv2 = MobileNetBlock(256, 128)
-        self.conv3 = MobileNetBlock(128, 64)
-        self.conv4 = MobileNetBlock(64, 32)
-        self.conv5 = MobileNetBlock(32, self.out_channels) # Output depth only
         
+        self.conv1 = MobileNetBlock(512, 256) 
+        self.conv2 = MobileNetBlock(256, 128)  
+        self.conv3 = MobileNetBlock(128, 64)   
+        self.conv4 = MobileNetBlock(64, 32)    
+        self.conv5 = MobileNetBlock(32, self.out_channels)  # x1 → output
+
+        
+        self.up3 = nn.ConvTranspose2d(128, 128, kernel_size=2, stride=2)  
+        self.up4 = nn.ConvTranspose2d(64, 64, kernel_size=2, stride=2)   
+        self.up5 = nn.ConvTranspose2d(32, 32, kernel_size=2, stride=2)    
+
     def forward(self, x1, x2, x3, x4, x5):
-        x = self.conv1(x5)
-        x = self.conv2(x) + x3
-        x = self.conv3(x) + x2
-        x = self.conv4(x) + x1
-        return self.conv5(x)
+        # No upsampling yet
+        x = self.conv1(x5)  # 512 → 256
+        x = x + x4  
+        x = self.conv2(x)  
+        x = x + x3  
+
+        # Now we start upsampling
+        x = self.up3(x)  # 65×30 → 130×60
+        print(x.shape, x2.shape)
+        x = self.conv3(x)
+        x = x + x2  # 128 → 64 channels
+        
+
+        x = self.up4(x)  # 130×60 → 260×120
+        x = self.conv4(x)
+        x = x + x1  # 64 → 32 channels
+        
+
+        x = self.up5(x)  # 260×120 → 520×240
+        x = self.conv5(x)  # Final output channels
+
+        return x
+
+
+
+# class Decoder(nn.Module):
+#     def __init__(self):
+#         super(Decoder, self).__init__()
+#         self.out_channels = config.config["output_channels"]
+        
+#         # Ensure each conv layer reduces channels before addition
+#         self.conv1 = MobileNetBlock(512, 256)
+#         self.conv2 = MobileNetBlock(256, 128)
+#         self.conv3 = MobileNetBlock(128, 64)
+#         self.conv4 = MobileNetBlock(64, 32)
+#         self.conv5 = MobileNetBlock(32, self.out_channels)
+
+#     def forward(self, x1, x2, x3, x4, x5):
+#         x = self.conv1(x5)  # Reduce channels: 512 → 256
+
+
+#         #x = F.interpolate(x, size=x4.shape[2:], mode="bilinear", align_corners=False)
+#         x = x + x4  # Now, both x and x4 have 256 channels
+#         x = self.conv2(x)  # Reduce channels: 256 → 128
+
+        
+
+#         #x = F.interpolate(x, size=x3.shape[2:], mode="bilinear", align_corners=False)
+#         x = x + x3  # Now, both x and x3 have 128 channels
+    
+#         x = self.conv3(x)  # Reduce channels: 128 → 64
+    
+       
+
+#         x = F.interpolate(x, size=x2.shape[2:], mode="bilinear", align_corners=False)
+
+#         x = x + x2  # Now, both x and x2 have 64 channels
+#         x = self.conv4(x)  # Reduce channels: 64 → 32
+       
+
+#         x = F.interpolate(x, size=x1.shape[2:], mode="bilinear", align_corners=False)
+    
+#         x = x + x1  # Now, both x and x1 have 32 channels
+#         x = self.conv5(x)  # Reduce channels: 32 → output channels
+
+#         #x = F.interpolate(x, size = x1og.shape[2:], mode="bilinear", align_corners=False )
+
+       
+
+#         return x
+
+
+    
+# class Decoder(nn.Module):
+#     '''
+#         Input: 5 layers of features from Encoder
+#         Output: N * 1 (depth) * H * W
+#     '''
+#     def __init__(self):
+#         super(Decoder, self).__init__()
+#         self.out_channels = config.config["output_channels"]
+        
+#         self.conv1 = MobileNetBlock(512, 256)
+#         self.conv2 = MobileNetBlock(256, 128)
+#         self.conv3 = MobileNetBlock(128, 64)
+#         self.conv4 = MobileNetBlock(64, 32)
+#         self.conv5 = MobileNetBlock(32, self.out_channels) # Output depth only
+        
+#     def forward(self, x1, x2, x3, x4, x5):
+#         x = self.conv1(x5)
+#         x = self.conv2(x) + x3
+#         x = self.conv3(x) + x2
+#         x = self.conv4(x) + x1
+#         return self.conv5(x)
         
         
 class DepthModel(nn.Module):
