@@ -92,7 +92,7 @@ class Encoder(nn.Module):
 #         return x1, x2, x3, x4, x5
 
 
-import torch.nn.functional as F  # Ensure this is imported
+
 
 class Decoder(nn.Module):
     def __init__(self):
@@ -136,52 +136,6 @@ class Decoder(nn.Module):
         return x
 
 
-
-# class Decoder(nn.Module):
-#     def __init__(self):
-#         super(Decoder, self).__init__()
-#         self.out_channels = config.config["output_channels"]
-        
-#         # Ensure each conv layer reduces channels before addition
-#         self.conv1 = MobileNetBlock(512, 256)
-#         self.conv2 = MobileNetBlock(256, 128)
-#         self.conv3 = MobileNetBlock(128, 64)
-#         self.conv4 = MobileNetBlock(64, 32)
-#         self.conv5 = MobileNetBlock(32, self.out_channels)
-
-#     def forward(self, x1, x2, x3, x4, x5):
-#         x = self.conv1(x5)  # Reduce channels: 512 → 256
-
-
-#         #x = F.interpolate(x, size=x4.shape[2:], mode="bilinear", align_corners=False)
-#         x = x + x4  # Now, both x and x4 have 256 channels
-#         x = self.conv2(x)  # Reduce channels: 256 → 128
-
-        
-
-#         #x = F.interpolate(x, size=x3.shape[2:], mode="bilinear", align_corners=False)
-#         x = x + x3  # Now, both x and x3 have 128 channels
-    
-#         x = self.conv3(x)  # Reduce channels: 128 → 64
-    
-       
-
-#         x = F.interpolate(x, size=x2.shape[2:], mode="bilinear", align_corners=False)
-
-#         x = x + x2  # Now, both x and x2 have 64 channels
-#         x = self.conv4(x)  # Reduce channels: 64 → 32
-       
-
-#         x = F.interpolate(x, size=x1.shape[2:], mode="bilinear", align_corners=False)
-    
-#         x = x + x1  # Now, both x and x1 have 32 channels
-#         x = self.conv5(x)  # Reduce channels: 32 → output channels
-
-#         #x = F.interpolate(x, size = x1og.shape[2:], mode="bilinear", align_corners=False )
-
-       
-
-#         return x
 
 
     
