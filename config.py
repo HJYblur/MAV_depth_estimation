@@ -4,8 +4,8 @@ import torch
 config = {
     # Model training configurations
     "device": "cuda" if torch.cuda.is_available() else "cpu",
-    "epochs": 1,
-    "batch_size": 1, # For test, use a smaller batch size
+    "epochs": 100,
+    "batch_size": 4, # For test, use a smaller batch size
     "train_val_split": 0.8,
     "learning_rate": 0.001,
     "weight_decay": 0.0001,
@@ -16,6 +16,7 @@ config = {
     'depth_path': 'data/depth_map',
     'image_width': 520,
     'image_height': 240,
+    "cam_hor_FOV": 120, # degrees
     
     # Model configurations
     "image_mode": "L", # "RGB" or "L" (grayscale)

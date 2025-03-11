@@ -88,6 +88,8 @@ def eval(num_imgs, model_id=0):
     '''
     Pick some random input images and run depth estimation on it
     '''
+    config.config["device"] = "cpu"
+
     # Load model
     model_path = config.config["save_model_path"] + f"/model_{model_id}.pth"
 
@@ -103,15 +105,19 @@ def eval(num_imgs, model_id=0):
 
     # Run depth estimation
     with torch.no_grad():
-        for i, (img, _) in enumerate(eval_loader):
+        for i, (img, depth_img) in enumerate(eval_loader):
             # Run model
             start_time = time.time()
             depth_pred = depth_model(img)
-            # print(f"Depth prediction: {depth_pred}")
-            max_depth, max_indices = torch.max(depth_pred, dim=1)
             
             print(f"Inference time: {time.time() - start_time:.2f} seconds")
+            # print(f"Depth prediction: {depth_pred}")
+            max_depth, max_indices = torch.max(depth_pred, dim=1)
             print(f"Predicted depth & position: {max_depth}, {max_indices / config.config['output_channels']}")
+            
+            # utils.visualize_depth_vector(depth_pred[0])
+            depth_gt = dataset.extract_center_from_depthmap(depth_img)
+            utils.show_eval_vectors(depth_pred[0], depth_gt[0], img, depth_img)
 
     
 if __name__ == "__main__":
@@ -119,7 +125,7 @@ if __name__ == "__main__":
     if args.mode == "train":
         train()
     elif args.mode == "eval":
-        eval(num_imgs=10, model_id=0)
+        eval(num_imgs=3, model_id=99)
     else:
         utils.load_comparison()
         # raise ValueError("Invalid mode. Please choose 'train' or 'eval'.")
