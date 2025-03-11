@@ -17,8 +17,8 @@ num_images = len([f for f in os.listdir(image_dir) if f.lower().endswith(('.png'
 print(f"Number of images in the directory: {num_images}")
 
 transform = T.Compose([
-    T.Resize((256, 256)),  # Resize to a common size (adjust as needed)
-    T.ToTensor()  # Convert to tensor (C, H, W)
+    T.Resize((256, 256)),  # Resize 
+    T.ToTensor()  #(C, H, W)
 ])
 
 
@@ -29,13 +29,12 @@ for filename in os.listdir(image_dir):
     if filename.lower().endswith(('.jpg', '.jpeg')): 
         img_path = os.path.join(image_dir, filename)
         image = Image.open(img_path)  
-        image_tensor = transform(image)  # Apply transformations
+        image_tensor = transform(image)  
         image_tensors.append(image_tensor)
         filenames.append(filename)
 
 
 
-# Stack images into a batch (N, C, H, W)
 if image_tensors:
     batch_images = torch.stack(image_tensors)  # Shape: (N, 1, H, W)
 
@@ -66,5 +65,5 @@ df = pd.DataFrame(center_column_output, index=filenames)
 df.to_csv(output_csv, header=False)
 print(f"Center column vectors saved to {output_csv}")
 
-# Print shape for verification
+
 print(f"Extracted center column shape: {center_column_output.shape}")
