@@ -237,7 +237,7 @@ def show_eval_vectors(depth_pred, depth_gt, img, depth_img):
     plt.plot(angles, depth_pred)
     plt.plot(angles, depth_gt)
     plt.title(f"Depth vector visualization")
-    plt.xticks([max_angle, min_angle], [cam_half_fov, -cam_half_fov])
+    plt.xticks([max_angle, np.pi/2, min_angle], [f"{cam_half_fov}°", f"0°", f"{-cam_half_fov}°"])
     plt.legend(["Predicted depth", "Ground truth depth"], loc="lower center")
 
     plt.show()
