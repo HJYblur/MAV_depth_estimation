@@ -119,7 +119,7 @@ if __name__ == "__main__":
         uyuv_path = config.config["uyvy_path"]
         original_image_path = config.config["image_path"]
         
-        # utils.data_preprocess(h5_path, config.config["raw_path"], append=args.add_data)
+        utils.data_preprocess(h5_path, config.config["raw_path"], append=args.add_data)
         utils.convert_images_to_uyvy(original_image_path, uyuv_path)
     elif args.mode == "train":
         train()
