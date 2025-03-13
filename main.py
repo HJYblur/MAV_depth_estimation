@@ -122,6 +122,8 @@ if __name__ == "__main__":
     elif args.mode == "eval":
         eval(num_imgs=10, model_id=args.model_id)
     else:
-        utils.depth_checker()
+        h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5
+        utils.h5_checker(h5_path)
+        # utils.depth_checker()
         # utils.load_comparison()
         # raise ValueError("Invalid mode. Please choose 'train' or 'eval'.")

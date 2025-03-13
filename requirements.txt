@@ -7,3 +7,4 @@ tensorboard
 h5py
 matplotlib
 onnx
+opencv-python
