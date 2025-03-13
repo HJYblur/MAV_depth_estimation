@@ -9,4 +9,8 @@ __pycache__/
 # DS_Store
 ".DS_Store"
 
-/logs/
+logs/
+*.DS_Store
+
+data/h5
+data/raw_image
