@@ -15,8 +15,11 @@ def parse_args():
         Parse arguments from command line
     '''
     parser = argparse.ArgumentParser(description="Depth Estimation")
-    parser.add_argument("--mode", type=str, default=None, help="Mode: train/eval")
+    parser.add_argument("--mode", type=str, default=None, help="Mode: data/train/eval")
+    parser.add_argument("--h5file", type=str, default=None, help="H5 file name")
+    parser.add_argument("--add_data", type=bool, default=True, help="Add new data or not")
     parser.add_argument("--checkpoint", type=str, default=None, help="Path to checkpoint file")
+    parser.add_argument("--model_id", type=int, default=0, help="Model ID for evaluation")
     args = parser.parse_args()
     return args
 
@@ -45,7 +48,69 @@ def init_logger():
     return logger
 
 
-def convert_h5_to_image(h5_path):
+def data_preprocess(h5_path, raw_image_path, append = True):
+    '''
+        Load depth matrix from h5 file and store as numpy, also store the original image
+    '''
+    depth_path = config.config["depth_path"]
+    image_path = config.config["image_path"]
+    os.makedirs(depth_path, exist_ok=True)
+    os.makedirs(image_path, exist_ok=True)
+    
+    assert len(os.listdir(image_path)) == len(os.listdir(depth_path)), "Number of images and depth maps do not match"
+    prev_index = len(os.listdir(depth_path)) if append else 0
+    print(f"Previous index: {prev_index}")
+    # return
+    
+    raw_image_list = os.listdir(raw_image_path)
+    with h5py.File(h5_path, "r") as f:
+        for i, key in enumerate(f.keys()):
+            index = i + prev_index
+            print(f"Processing {key}, index: {index}")
+            depth_array = f[f[key].name][:]
+            depth_array = depth_array / 255.0
+            if key in raw_image_list:
+                # Rename the image file
+                os.rename(os.path.join(raw_image_path, key), os.path.join(image_path, f"image_{index:05d}.jpg"))
+                # Save the depth matrix
+                np.save(os.path.join(depth_path, f"array_{index:05d}.npy"), depth_array)
+                print(f"Move {key} to image_{index:05d}.jpg, Save depth to array_{index:05d}.npy") 
+            else:
+                print(f"Image {key} not found")
+                continue
+
+
+def depth_checker():
+    depth_path = config.config["depth_path"]
+    random_index = random.randint(0, len(os.listdir(depth_path)))
+    depth_array = np.load(os.path.join(depth_path, f"array_{random_index:05d}.npy"))
+    print(f"Depth array shape: {depth_array.shape}")
+    print(f"Depth array: {depth_array}")
+    plt.imshow(depth_array, cmap="gray")
+    plt.show()
+    
+
+def convert_h5_to_array(h5_path): 
+    '''
+        Load depth matrix from h5 file and store as numpy 
+    '''
+    output_path = os.path.join("data", "depth_matrix")
+    os.makedirs(output_path, exist_ok=True)
+    
+    with h5py.File(h5_path, "r") as f:
+        for i, key in enumerate(f.keys()):
+            # 520 * 240 array store the depth information
+            array = f[f[key].name][:]
+            array = array / 255.0
+            # print(f"Array : {array}")
+            # print(f"Array shape: {array.shape}")
+            # break
+            array_path = os.path.join(output_path, f"array_{i:05d}.npy")
+            np.save(array_path, array)
+            print(f"Save {f[key].name} array to {array_path}")
+
+
+def convert_h5_to_image(h5_path): 
     '''
         Load image from h5 file and store in 
     '''

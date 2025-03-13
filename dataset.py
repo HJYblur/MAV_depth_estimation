@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,12 +19,20 @@ class DepthDataset(Dataset):
         
     def __getitem__(self, idx):
         img_path = os.path.join(self.image_path, f"image_{idx:05d}.jpg")
-        depth_path = os.path.join(self.depth_path, f"image_{idx:05d}.jpg")
         
-        img = load_image(img_path, mode=self.image_mode, use_uint8=self.in_type_uint8) # 3 * H * W (rgb) or 1 * H * W (grayscale)
-        depth = load_image(depth_path, mode="L") # 1 * H * W, convert to grayscale maps
+        if self.image_mode == "RGB" or self.image_mode == "L":
+            img = load_image_tensor(img_path, mode=self.image_mode, use_uint8=self.in_type_uint8) # 3 * H * W (rgb) or 1 * H * W (grayscale)
+        elif self.image_mode == "YUV":
+            img = load_image_array(img_path) # H * W * 3 (rgb)
+            img = rgb2yuv(img) # H * W * 3 (yuv)
+            img = T.ToTensor()(img).to(torch.float32) # 3 * H * W (yuv)
         
-        return img, depth
+        depth_matrix = np.load(os.path.join(self.depth_path, f"array_{idx:05d}.npy"))
+        depth_vector = extract_center_from_depthmatrix(depth_matrix) # 1 * H
+        # Convert to float tensor
+        depth_vector = torch.tensor(depth_vector, dtype=torch.float32)
+        
+        return img, depth_vector
         
     def __len__(self):
         # There's a hidden file called ".DS_store" (some mac thing) which means this method counts 1 more image
@@ -31,13 +40,24 @@ class DepthDataset(Dataset):
         return len(os.listdir(self.image_path)) - 1
     
     
-def load_image(path, mode = "RGB", use_uint8=False):
+def load_image_array(path):
+    img = Image.open(path).convert("RGB")
+    return np.array(img) # H * W * 3 (rgb) or H * W (grayscale)
+
+    
+def load_image_tensor(path, mode = "RGB", use_uint8=False):
     '''
         Load image from path and convert to tensor
     '''
     img = Image.open(path).convert(mode)
     if use_uint8: return T.PILToTensor()(img)
     return T.ToTensor()(img)
+
+
+def extract_center_from_depthmatrix(depth_matrix):
+    H, W = depth_matrix.shape
+    center_depth = depth_matrix[:, W//2] # 1 * H
+    return center_depth
 
 
 def extract_center_from_depthmap(batch_depth_map):
@@ -94,3 +114,57 @@ def load_eval_dataset(num_imgs):
         )
     
     return eval_data_loader
+
+
+def yuv2rgb(im):
+    """ 
+        Convert YUV to RGB 
+        ref: https://github.com/guidoAI/YUV_notebook/blob/master/YUV_slices.py
+    """
+    if(np.max(im[:]) <= 1.0):
+        im *= 255
+        
+    Y = im[:,:,0]
+    U = im[:,:,1]
+    V = im[:,:,2]
+    
+    R  = Y + 1.402   * ( V - 128 )
+    G  = Y - 0.34414 * ( U - 128 ) - 0.71414 * ( V - 128 )
+    B  = Y + 1.772   * ( U - 128 )
+
+    rgb = im
+    rgb[:,:,0] = R / 255.0
+    rgb[:,:,1] = G / 255.0
+    rgb[:,:,2] = B / 255.0
+
+    inds1 = np.where(rgb < 0.0)
+    for i in range(len(inds1[0])):
+        rgb[inds1[0][i], inds1[1][i], inds1[2][i]] = 0.0
+        
+    inds2 = np.where(rgb > 1.0)
+    for i in range(len(inds2[0])):
+        rgb[inds2[0][i], inds2[1][i], inds2[2][i]] = 1.0
+    return rgb
+
+
+def rgb2yuv(rgb):
+    """
+        Convert RGB to YUV
+        input: H * W * 3 (rgb)
+        output: H * W * 3 (yuv)
+    """
+    if np.max(rgb) <= 1.0:
+        rgb *= 255
+    R = rgb[:,:,0]
+    G = rgb[:,:,1]
+    B = rgb[:,:,2]
+    
+    Y = 0.299 * R + 0.587 * G + 0.114 * B
+    U = -0.14713 * R - 0.28886 * G + 0.436 * B
+    V = 0.615 * R - 0.51499 * G - 0.10001 * B
+    
+    yuv = np.zeros(rgb.shape)
+    yuv[:,:,0] = Y
+    yuv[:,:,1] = U
+    yuv[:,:,2] = V
+    return yuv

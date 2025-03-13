@@ -40,13 +40,12 @@ def train():
     counter = 0
     for epoch in range(config.config["epochs"]):
         # Training loop
-        for i, (img, depth_map) in tqdm(enumerate(train_loader)):
-            img, depth_map = img.to(device), depth_map.to(device)
-            depth_vector = dataset.extract_center_from_depthmap(depth_map)
+        for i, (img, depth_vec) in tqdm(enumerate(train_loader)):
+            img, depth_vec = img.to(device), depth_vec.to(device)
             
             optimizer.zero_grad()
             pred_depth = depth_model(img) 
-            loss_train = loss(pred_depth, depth_vector)
+            loss_train = loss(pred_depth, depth_vec)
             # print(f"pred_depth: {pred_depth.shape}, depth_vector: {depth_vector.shape}")
             loss_train.backward()
             optimizer.step()
@@ -59,26 +58,25 @@ def train():
         
         # Validation loop
         depth_model.eval()
-        for i, (img, depth) in enumerate(val_loader):
-            img, depth = img.to(device), depth.to(device)
-            depth_vector = dataset.extract_center_from_depthmap(depth_map)
+        for i, (img, depth_vec) in enumerate(val_loader):
+            img, depth_vec = img.to(device), depth_vec.to(device)
             
             pred_depth = depth_model(img)
-            loss_val = loss(pred_depth, depth_vector)
+            loss_val = loss(pred_depth, depth_vec)
             
             if i % 10 == 0 & logging_on:
                 logger.info(f"Epoch {epoch}, Iteration {i}, Val Loss: {loss_val.item()}")
                 writer.add_scalar("Loss/val", loss_val.item(), epoch * len(val_loader) + i)
             
             # Early stopping
-            if loss_val < best_loss:
-                best_loss = loss_val
-                counter = 0
-            else:
-                counter += 1
-                if counter > 5:
-                    if logging_on: logger.info(f"Early stopping at epoch {epoch}.")
-                    break
+            # if loss_val < best_loss:
+            #     best_loss = loss_val
+            #     counter = 0
+            # else:
+            #     counter += 1
+            #     if counter > config.config["patience"]:
+            #         if logging_on: logger.info(f"Early stopping at epoch {epoch}.")
+            #         break
     if logging_on:
         logger.info("Training complete.")
         writer.close()
@@ -98,7 +96,7 @@ def eval(num_imgs, model_id=0):
     depth_model.eval()
     # depth_model = quantize_dynamic(depth_model, dtype=torch.qint8)
  
-    print(f"Number of parameters: {depth_model.compute_parameters()}")
+    # print(f"Number of parameters: {depth_model.compute_parameters()}")
 
     # Load images
     eval_loader = dataset.load_eval_dataset(num_imgs)
@@ -122,10 +120,14 @@ def eval(num_imgs, model_id=0):
     
 if __name__ == "__main__":
     args = utils.parse_args()
-    if args.mode == "train":
+    if args.mode == "data":
+        h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5
+        utils.data_preprocess(h5_path, config.config["raw_path"], append=args.add_data)
+    elif args.mode == "train":
         train()
     elif args.mode == "eval":
-        eval(num_imgs=3, model_id=99)
+        eval(num_imgs=10, model_id=args.model_id)
     else:
-        utils.load_comparison()
+        utils.depth_checker()
+        # utils.load_comparison()
         # raise ValueError("Invalid mode. Please choose 'train' or 'eval'.")

@@ -26,7 +26,7 @@ class MobileNetBlock(nn.Module):
     '''
         Adapt from MobileNet to save computational resources
     '''
-    def __init__(self, in_channels, out_channels, stride = 2):
+    def __init__(self, in_channels, out_channels, stride = 1):
         super(MobileNetBlock, self).__init__()
         self.depthwise = conv(in_channels, in_channels, 3, stride) # Capturing spatial information
         self.pointwise = conv(in_channels, out_channels, 1) # Increasing the depth
@@ -56,12 +56,12 @@ class ShallowDepthModel(nn.Module):
         
     def forward(self, x):
         # x: N * 3 * H * W
-        x = self.encoder1(x) # N * 16 * H/2 * W/2
-        x = self.encoder2(x) # N * 32 * H/4 * W/4
-        x = self.encoder3(x) # N * 64 * H/8 * W/8
+        x = self.encoder1(x) # N * 16 * H * W
+        x = self.encoder2(x) # N * 32 * H * W
+        x = self.encoder3(x) # N * 64 * H * W
         x = self.pool(x) # N * 64 * 1 * 1
         x = x.view(x.size(0), -1) # N * 64
-        x = self.fc(x) # N * (W/8)
+        x = self.fc(x) # N * W
         return x
     
     def compute_parameters(self):

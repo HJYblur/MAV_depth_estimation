@@ -17,7 +17,14 @@ The code accepts the following command-line arguments:
 
 ### Running the code
 
-1. Training
+1. Data Prepossing
+
+To convert the raw data from h5 file format to depth tensor, run the following command:
+
+`python main.py --mode data`
+
+
+2. Training
 
 To train the model, use the following command:
 
@@ -27,13 +34,13 @@ You can optionally specify a checkpoint file to resume training from a saved sta
 
 `python main.py --mode train --checkpoint path/to/checkpoint.pth`
 
-2. Evaluation
+3. Evaluation
 
 To evaluate the model, use the following command:
 
 `python main.py --mode eval --checkpoint path/to/checkpoint.pth`
 
-3. Simple test by loading image & depth map comparison
+4. Simple test by loading image & depth map comparison
 
 To simply load a random pair of image and depth map for comparison, use the following command:
 
@@ -45,12 +52,14 @@ The TODO.txt in the folders are just for getting the empty directory to be track
 
 **TODO:**
 
-0. **Downsample the original input**
-1. **Change the output layer to be vector instead of depth map / Add custom SSIM loss function**
-2. **Data augmentation** -> focus on random clip & rotation, etc
-3.  **Compare between MobielNet v1 & MobielNet v3 to see if we can furthur improve the data**
-4. **Use out-of-scene data for regularion** -> To improve model's generalization ability
+1. **Data augmentation** -> focus on random clip & rotation, etc
+2.  **Compare between MobielNet v1 & MobielNet v3 to see if we can furthur improve the data**
+3. **Use out-of-scene data for regularion** -> To improve model's generalization ability
 
+### Optimization
+
+1. decrease the input size
+2. just make it compatible with the flying speed -> 10fps is enough
 
 ## Dataset 
 
