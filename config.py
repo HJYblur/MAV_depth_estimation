@@ -4,8 +4,8 @@ import torch
 config = {
     # Model training configurations
     "device": "cuda" if torch.cuda.is_available() else "cpu",
-    "epochs": 2,
-    "batch_size": 6, # For test, use a smaller batch size
+    "epochs": 10,
+    "batch_size": 4, # For test, use a smaller batch size
     "train_val_split": 0.8,
     "learning_rate": 0.001,
     "weight_decay": 0.0001,
