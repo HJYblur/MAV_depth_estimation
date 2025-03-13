@@ -17,14 +17,15 @@ config = {
     'raw_path': 'data/raw_image',
     'image_path': 'data/original_image',
     'depth_path': 'data/depth_matrix',
-    'image_width': 504,
-    'image_height': 221,
-    "image_mode": "RGB", # "RGB" or "L" (grayscale)
+    'uyvy_path': 'data/uyvy',
+    'image_width': 520,
+    'image_height': 240,
+    "image_mode": "UYVY", # "RGB" or "L" (grayscale) or "UYVY"
     "input_type_uint8": False,
     "cam_hor_FOV": 120, # degrees
     
     # Model configurations
-    "input_channels": 3, # 3 for RGB, 1 for grayscale
+    "input_channels": 1, # 3 for RGB, 1 for grayscale, 1 for uyuv(1*H*2W)
     "output_channels": 504, # Output depth vector length
 
     # Model paths

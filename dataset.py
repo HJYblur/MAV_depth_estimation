@@ -12,23 +12,23 @@ import random
 
 class DepthDataset(Dataset):
     def __init__(self):
+        self.uyvy_path = config.config["uyvy_path"]
         self.image_path = config.config["image_path"]
         self.depth_path = config.config["depth_path"]
         self.image_mode = config.config["image_mode"]
         self.in_type_uint8 = config.config["input_type_uint8"]
         
     def __getitem__(self, idx):
-        img_path = os.path.join(self.image_path, f"image_{idx:05d}.jpg")
         
         if self.image_mode == "RGB" or self.image_mode == "L":
-            img = load_image_tensor(img_path, mode=self.image_mode, use_uint8=self.in_type_uint8) # 3 * H * W (rgb) or 1 * H * W (grayscale)
-        elif self.image_mode == "YUV":
-            img = load_image_array(img_path) # H * W * 3 (rgb)
-            img = rgb2yuv(img) # H * W * 3 (yuv)
-            img = T.ToTensor()(img).to(torch.float32) # 3 * H * W (yuv)
+            img_path = os.path.join(self.image_path, f"image_{idx:05d}.jpg")
+            img = self.load_image_tensor(img_path, mode=self.image_mode, use_uint8=self.in_type_uint8) # 3 * H * W (rgb) or 1 * H * W (grayscale)
+        elif self.image_mode == "UYVY":
+            uyvy_img_path = os.path.join(self.uyvy_path, f"image_{idx:05d}.npy")
+            img = self.load_uyvy_tensor(uyvy_img_path)
         
         depth_matrix = np.load(os.path.join(self.depth_path, f"array_{idx:05d}.npy"))
-        depth_vector = extract_center_from_depthmatrix(depth_matrix) # 1 * H
+        depth_vector = self.extract_center_from_depthmatrix(depth_matrix) # 1 * H
         # Convert to float tensor
         depth_vector = torch.tensor(depth_vector, dtype=torch.float32)
         
@@ -38,26 +38,35 @@ class DepthDataset(Dataset):
         # There's a hidden file called ".DS_store" (some mac thing) which means this method counts 1 more image
         # if you don't do -1
         return len(os.listdir(self.image_path)) - 1
-    
-    
-def load_image_array(path):
-    img = Image.open(path).convert("RGB")
-    return np.array(img) # H * W * 3 (rgb) or H * W (grayscale)
+   
+   
+    def load_uyvy_tensor(self, path):
+        '''
+            Load uyvy image from path and convert to tensor
+        '''
+        uyvy = np.load(path, allow_pickle=True)
+        uyvy = torch.tensor(uyvy, dtype=torch.float32).unsqueeze(0) # 1 * H * W
+        return uyvy
+        
+        
+    def load_image_array(self, path):
+        img = Image.open(path).convert("RGB")
+        return np.array(img) # H * W * 3 (rgb)
 
-    
-def load_image_tensor(path, mode = "RGB", use_uint8=False):
-    '''
-        Load image from path and convert to tensor
-    '''
-    img = Image.open(path).convert(mode)
-    if use_uint8: return T.PILToTensor()(img)
-    return T.ToTensor()(img)
+        
+    def load_image_tensor(self, path, mode = "RGB", use_uint8=False):
+        '''
+            Load image from path and convert to tensor
+        '''
+        img = Image.open(path).convert(mode)
+        if use_uint8: return T.PILToTensor()(img)
+        return T.ToTensor()(img)
 
 
-def extract_center_from_depthmatrix(depth_matrix):
-    H, W = depth_matrix.shape
-    center_depth = depth_matrix[:, W//2] # 1 * H
-    return center_depth
+    def extract_center_from_depthmatrix(self, depth_matrix):
+        H, W = depth_matrix.shape
+        center_depth = depth_matrix[:, W//2] # 1 * H
+        return center_depth
 
 
 def extract_center_from_depthmap(batch_depth_map):

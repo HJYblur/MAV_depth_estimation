@@ -42,6 +42,7 @@ def train():
         # Training loop
         for i, (img, depth_vec) in tqdm(enumerate(train_loader)):
             img, depth_vec = img.to(device), depth_vec.to(device)
+            # print(f"img: {img.shape}, depth_vec: {depth_vec.shape}")
             
             optimizer.zero_grad()
             pred_depth = depth_model(img) 
@@ -122,12 +123,17 @@ if __name__ == "__main__":
     args = utils.parse_args()
     if args.mode == "data":
         h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5
+        uyuv_path = config.config["uyvy_path"]
+        original_image_path = config.config["image_path"]
         utils.data_preprocess(h5_path, config.config["raw_path"], append=args.add_data)
+        utils.convert_images_to_uyvy(original_image_path, uyuv_path)
     elif args.mode == "train":
         train()
     elif args.mode == "eval":
         eval(num_imgs=10, model_id=args.model_id)
     else:
-        utils.depth_checker()
+        h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5
+        utils.h5_checker(h5_path)
+        # utils.depth_checker()
         # utils.load_comparison()
         # raise ValueError("Invalid mode. Please choose 'train' or 'eval'.")
