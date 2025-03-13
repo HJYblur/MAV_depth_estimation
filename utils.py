@@ -83,12 +83,11 @@ def data_preprocess(h5_path, raw_image_path, append = True):
     
 def convert_images_to_uyvy(input_folder, output_folder):
     """
-    Converts all RGB(D) images in the input folder to UYVY format and saves them as .bin files.
-    Also saves the depth channel (if available) as grayscale PNG images.
+    Converts all RGB images in the input folder to UYVY format and saves them as .npy files.
 
     Args:
         input_folder (str): Path to the folder containing input RGBD images.
-        output_folder (str): Path to save UYVY .bin files and depth maps.
+        output_folder (str): Path to save UYVY .npy files.
     """
     os.makedirs(output_folder, exist_ok=True)
 
@@ -129,20 +128,10 @@ def convert_images_to_uyvy(input_folder, output_folder):
                 uyvy[row, idx + 2] = v[row, col]        # V
                 uyvy[row, idx + 3] = y[row, col + 1]    # Y1
 
-        # Save UYVY as .bin
-        uyvy_path = os.path.join(output_folder, f"{base_name}_UYVY.bin")
-        uyvy.tofile(uyvy_path)
+        # Save UYVY as .npy file
+        np.save(os.path.join(output_folder, f"{base_name}.npy"), uyvy)
 
-        # Save depth if available
-        if img.shape[2] == 4:
-            d = img[:, :, 3]
-            d_path = os.path.join(output_folder, f"{base_name}_D.png")
-            cv2.imwrite(d_path, d)
-            print(f"Saved {base_name}_UYVY.bin and depth map")
-        else:
-            print(f"Saved {base_name}_UYVY.bin")
-
-    print("All images converted to UYVY format.")
+    print(f"All {len(os.listdir(input_folder))} images converted to UYVY format.")
 
 
 def depth_checker():

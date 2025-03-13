@@ -17,6 +17,7 @@ config = {
     'raw_path': 'data/raw_image',
     'image_path': 'data/original_image',
     'depth_path': 'data/depth_matrix',
+    'uyvy_path': 'data/uyvy',
     'image_width': 504,
     'image_height': 221,
     "image_mode": "RGB", # "RGB" or "L" (grayscale)

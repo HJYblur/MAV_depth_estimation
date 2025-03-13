@@ -116,7 +116,11 @@ if __name__ == "__main__":
     args = utils.parse_args()
     if args.mode == "data":
         h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5
-        utils.data_preprocess(h5_path, config.config["raw_path"], append=args.add_data)
+        uyuv_path = config.config["uyvy_path"]
+        original_image_path = config.config["image_path"]
+        
+        # utils.data_preprocess(h5_path, config.config["raw_path"], append=args.add_data)
+        utils.convert_images_to_uyvy(original_image_path, uyuv_path)
     elif args.mode == "train":
         train()
     elif args.mode == "eval":
