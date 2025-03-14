@@ -22,6 +22,7 @@ config = {
     'image_height': 240,
     "image_mode": "UYVY", # "RGB" or "L" (grayscale) or "UYVY"
     "input_type_uint8": False,
+    "cam_hor_FOV": 120, # degrees
     
     # Model configurations
     "input_channels": 1, # 3 for RGB, 1 for grayscale, 1 for uyuv(1*H*2W)

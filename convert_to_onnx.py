@@ -5,8 +5,10 @@ from torch.quantization import quantize_dynamic
 
 def export_to_onnx(model_path, model_id, use_quantization=False):
     config.config["device"] = "cpu" # Always set device to cpu for export, so you don't get errors
+    img_width = config.config["image_width"]
+    img_height = config.config["image_height"]
 
-    depth_model = model.DepthModel()
+    depth_model = model.ShallowDepthModel()
     depth_model.load_state_dict(torch.load(model_path))
     depth_model.eval()
 
@@ -16,19 +18,20 @@ def export_to_onnx(model_path, model_id, use_quantization=False):
         depth_model = quantize_dynamic(depth_model, dtype=torch.qint8)
 
     # Export to ONNX
-    # TODO: Infer the image height and width somehow, don't hardcode it
     if config.config["input_type_uint8"]:
-        dummy_input = torch.randint(0, 256, (1, config.config["input_channels"], 520, 240), dtype=torch.uint8)
+        dummy_input = torch.randint(0, 256, (1, config.config["input_channels"], img_width, img_height * 2), dtype=torch.uint8)
     else:
-        dummy_input = torch.randn(1, config.config["input_channels"], 520, 240)
+        dummy_input = torch.randn(1, config.config["input_channels"], img_width, img_height * 2)
 
     onnx_model_path = config.config["save_model_path"] + f"/onnx_models/model_{model_id}.onnx"
-    torch.onnx.export(depth_model, dummy_input, onnx_model_path)
+    onnx_program = torch.onnx.export(depth_model, dummy_input, dynamo=True)
+    onnx_program.optimize()
+    onnx_program.save(onnx_model_path)
 
     print(f"Exported model_{model_id} to ONNX in {onnx_model_path}")
 
 if __name__ == "__main__":
-    model_id = 0
+    model_id = 9
     model_path = config.config["save_model_path"] + f"/model_{model_id}.pth"
 
-    export_to_onnx(model_path, model_id, True)
+    export_to_onnx(model_path, model_id, False)

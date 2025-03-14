@@ -253,3 +253,50 @@ def show_eval_images(depth_pred, img, depth_gt):
     plt.title(f"Predicted depth map")
     plt.axis("off")
     plt.show()
+
+def visualize_depth_vector(depth_vector, plot_axis=None):
+    cam_half_fov = config.config["cam_hor_FOV"] / 2
+    min_angle = np.deg2rad(-cam_half_fov) * -1 + 0.5*np.pi
+    max_angle = np.deg2rad(cam_half_fov) * -1 + 0.5*np.pi
+    angles = np.linspace(min_angle, max_angle, len(depth_vector),  endpoint=False)
+
+    fig, plot_axis = plt.subplots(subplot_kw={'projection': 'polar'})
+
+    plot_axis.plot(angles, depth_vector, linewidth=2, linestyle='solid')
+    plot_axis.set_yticklabels([])  # Hide radial ticks
+    plot_axis.set_xticks([max_angle,min_angle])  # Show angular ticks
+    plot_axis.set_xticklabels([cam_half_fov, -cam_half_fov])  # Label the angles as degrees
+
+    if plot_axis is not None: plt.show()
+
+    return plot_axis
+
+def show_eval_vectors(depth_pred, depth_gt, img, depth_img):
+    img_rotated = np.rot90(img[0], k=1, axes=[1,2])[0]
+    depth_img_rotated = np.rot90(depth_img[0], k=1, axes=[1,2])[0]
+
+    cam_half_fov = config.config["cam_hor_FOV"] / 2
+    min_angle = np.deg2rad(-cam_half_fov) * -1 + 0.5*np.pi
+    max_angle = np.deg2rad(cam_half_fov) * -1 + 0.5*np.pi
+    angles = np.linspace(min_angle, max_angle, len(depth_pred),  endpoint=False)
+
+    plt.figure()
+    plt.subplot(2, 2, 1)
+    if config.config["image_mode"] == "L": plt.imshow(img_rotated, cmap="gray")
+    else: plt.imshow(img_rotated)
+    plt.title(f"Original image")
+    plt.axis("off")
+    
+    plt.subplot(2, 2, 3)
+    plt.imshow(depth_img_rotated, cmap="gray")
+    plt.title(f"Depth image ground truth")
+    plt.axis("off")
+
+    plt.subplot(1, 2, 2, projection="polar")
+    plt.plot(angles, depth_pred)
+    plt.plot(angles, depth_gt)
+    plt.title(f"Depth vector visualization")
+    plt.xticks([max_angle, np.pi/2, min_angle], [f"{cam_half_fov}°", f"0°", f"{-cam_half_fov}°"])
+    plt.legend(["Predicted depth", "Ground truth depth"], loc="lower center")
+
+    plt.show()
