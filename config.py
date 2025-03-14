@@ -18,8 +18,8 @@ config = {
     'image_path': 'data/original_image',
     'depth_path': 'data/depth_matrix',
     'uyvy_path': 'data/uyvy',
-    'image_width': 520,
-    'image_height': 240,
+    'image_width': 240,
+    'image_height': 520,
     "image_mode": "UYVY", # "RGB" or "L" (grayscale) or "UYVY"
     "input_type_uint8": False,
     

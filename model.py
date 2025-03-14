@@ -26,7 +26,7 @@ class MobileNetBlock(nn.Module):
     '''
         Adapt from MobileNet to save computational resources
     '''
-    def __init__(self, in_channels, out_channels, stride = 1):
+    def __init__(self, in_channels, out_channels, stride = 2):
         super(MobileNetBlock, self).__init__()
         self.depthwise = conv(in_channels, in_channels, 3, stride) # Capturing spatial information
         self.pointwise = conv(in_channels, out_channels, 1) # Increasing the depth
@@ -47,21 +47,30 @@ class ShallowDepthModel(nn.Module):
         super(ShallowDepthModel, self).__init__()
         self.input_channels = config.config["input_channels"]
         self.output_channels = config.config["output_channels"]
+        self.height = int(config.config["image_height"] / 8)
+        self.width = int(config.config["image_width"] / 4)
         
-        self.encoder1 = MobileNetBlock(self.input_channels, 16)
-        self.encoder2 = MobileNetBlock(16, 32)
-        self.encoder3 = MobileNetBlock(32, 64)
-        self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(64, self.output_channels)
+        self.encoder1 = MobileNetBlock(self.input_channels, 4)
+        self.encoder2 = MobileNetBlock(4, 8)
+        self.encoder3 = MobileNetBlock(8, 16)
+        self.pool = nn.MaxPool2d(kernel_size=(self.height, self.width), stride=1)
+        # self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(16, self.output_channels)
         
     def forward(self, x):
         # x: N * 3 * H * W
-        x = self.encoder1(x) # N * 16 * H * W
-        x = self.encoder2(x) # N * 32 * H * W
-        x = self.encoder3(x) # N * 64 * H * W
-        x = self.pool(x) # N * 64 * 1 * 1
-        x = x.view(x.size(0), -1) # N * 64
+        x = self.encoder1(x) # N * 4 * H/2 * W/2
+        # print(f"Encoder1 output shape: {x.shape}")
+        x = self.encoder2(x) # N * 8 * H/4 * W/4
+        # print(f"Encoder2 output shape: {x.shape}")
+        x = self.encoder3(x) # N * 16 * H/8 * W/8
+        # print(f"Encoder3 output shape: {x.shape}")
+        x = self.pool(x) # N * 16 * H/16 * W/16
+        # print(f"Pool output shape: {x.shape}")
+        x = x.view(x.size(0), -1) # N * (H/16 * W/16 * 16)
+        # print(f"Flatten output shape: {x.shape}")
         x = self.fc(x) # N * W
+        # print(f"FC output shape: {x.shape}")
         return x
     
     def compute_parameters(self):
