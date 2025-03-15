@@ -290,7 +290,6 @@ def show_eval_vectors(depth_pred, depth_gt, img, depth_img):
     img_rotated = np.transpose(np.rot90(img[0], k=1, axes=[1,2]), [1,2,0]) / 255
     img_rotated = cv2.cvtColor(img_rotated, cv2.COLOR_YUV2RGB) # Convert back to RGB for display
 
-    print(depth_img.shape)
     depth_img_rotated = np.rot90(depth_img, k=1)
 
     cam_half_fov = config.config["cam_hor_FOV"] / 2
