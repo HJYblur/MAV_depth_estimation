@@ -2,6 +2,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.models as models
 import config
 
 
@@ -30,9 +31,11 @@ class MobileNetBlock(nn.Module):
         super(MobileNetBlock, self).__init__()
         self.depthwise = conv(in_channels, in_channels, 3, stride) # Capturing spatial information
         self.pointwise = conv(in_channels, out_channels, 1) # Increasing the depth
+        self.relu = nn.ReLU(inplace=True)
         
     def forward(self, x):
         x = self.depthwise(x)
+        x = self.relu(x)
         x = self.pointwise(x)
         return x
     
@@ -50,27 +53,48 @@ class ShallowDepthModel(nn.Module):
         self.height = int(config.config["image_height"] / 8)
         self.width = int(config.config["image_width"] / 4)
         
-        self.encoder1 = MobileNetBlock(self.input_channels, 4)
-        self.encoder2 = MobileNetBlock(4, 8)
-        self.encoder3 = MobileNetBlock(8, 16)
-        self.pool = nn.MaxPool2d(kernel_size=(self.height, self.width), stride=1)
-        # self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(16, self.output_channels)
+        self.encoder1 = MobileNetBlock(self.input_channels, 32)
+        self.encoder2 = MobileNetBlock(32, 64)
+        self.encoder3 = MobileNetBlock(64, 128)
+        self.relu = nn.ReLU(inplace=True)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.fc = nn.LazyLinear(self.output_channels)
         
     def forward(self, x):
-        # x: N * 3 * H * W
-        x = self.encoder1(x) # N * 4 * H/2 * W/2
-        # print(f"Encoder1 output shape: {x.shape}")
-        x = self.encoder2(x) # N * 8 * H/4 * W/4
-        # print(f"Encoder2 output shape: {x.shape}")
-        x = self.encoder3(x) # N * 16 * H/8 * W/8
-        # print(f"Encoder3 output shape: {x.shape}")
-        x = self.pool(x) # N * 16 * H/16 * W/16
-        # print(f"Pool output shape: {x.shape}")
-        x = x.view(x.size(0), -1) # N * (H/16 * W/16 * 16)
-        # print(f"Flatten output shape: {x.shape}")
-        x = self.fc(x) # N * W
-        # print(f"FC output shape: {x.shape}")
+        x = self.encoder1(x)
+        x = self.pool(x)
+        x = self.relu(x)
+        x = self.encoder2(x)
+        x = self.pool(x)
+        x = self.relu(x)
+        x = self.encoder3(x)
+        x = self.pool(x)
+        x = torch.flatten(x, start_dim=1)
+        x = self.relu(x)
+        x = self.fc(x)
+        return x
+    
+    def compute_parameters(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+    
+
+class Mob3DepthModel(nn.Module):
+    def __init__(self, lin_input_dim=256, output_dim=16):
+        super(Mob3DepthModel, self).__init__()
+        
+        self.mobilenet = models.mobilenet_v3_small() # 2.5 million params :( Probably not usable 
+
+        self.downsample = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        self.fc = nn.Linear(lin_input_dim, output_dim)
+
+    def forward(self, x):
+        x = self.mobilenet(x)
+        x = self.downsample(x)
+
+        x = torch.flatten(x, start_dim=1)
+        x = self.fc(x)
+
         return x
     
     def compute_parameters(self):

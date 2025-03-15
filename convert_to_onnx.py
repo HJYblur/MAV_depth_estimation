@@ -6,7 +6,7 @@ from torch.quantization import quantize_dynamic
 def export_to_onnx(model_path, model_id, use_quantization=False):
     config.config["device"] = "cpu" # Always set device to cpu for export, so you don't get errors
 
-    depth_model = model.DepthModel()
+    depth_model = model.ShallowDepthModel()
     depth_model.load_state_dict(torch.load(model_path))
     depth_model.eval()
 
@@ -28,7 +28,7 @@ def export_to_onnx(model_path, model_id, use_quantization=False):
     print(f"Exported model_{model_id} to ONNX in {onnx_model_path}")
 
 if __name__ == "__main__":
-    model_id = 0
+    model_id = 19
     model_path = config.config["save_model_path"] + f"/model_{model_id}.pth"
 
-    export_to_onnx(model_path, model_id, True)
+    export_to_onnx(model_path, model_id, False)

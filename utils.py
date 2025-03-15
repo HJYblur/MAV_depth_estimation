@@ -134,6 +134,38 @@ def convert_images_to_uyvy(input_folder, output_folder):
     print(f"All {len(os.listdir(input_folder))} images converted to UYVY format.")
 
 
+def convert_images_to_yuv(input_folder, output_folder):
+    """
+    Converts all RGB images in the input folder to YUV format and saves them as .npy files.
+
+    Args:
+        input_folder (str): Path to the folder containing input RGBD images.
+        output_folder (str): Path to save YUV .npy files.
+    """
+    os.makedirs(output_folder, exist_ok=True)
+
+    for fname in sorted(os.listdir(input_folder)):
+        if not fname.lower().endswith(('.png', '.jpg', '.jpeg')):
+            continue
+
+        img_path = os.path.join(input_folder, fname)
+        img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
+
+        if img is None or img.shape[2] < 3:
+            print(f"Skipping {fname}: not a valid RGB image.")
+            continue
+
+        base_name = os.path.splitext(fname)[0]
+        rgb = img[:, :, :3]
+
+        # Convert RGB (OpenCV BGR) to YUV
+        yuv = cv2.cvtColor(rgb, cv2.COLOR_BGR2YUV)
+        yuv = np.transpose(yuv, (2, 0, 1))
+        yuv = yuv.astype(np.uint8)
+
+        np.save(os.path.join(output_folder, f"{base_name}.npy"), yuv)
+
+
 def depth_checker():
     depth_path = config.config["depth_path"]
     random_index = random.randint(0, len(os.listdir(depth_path)))
@@ -252,4 +284,37 @@ def show_eval_images(depth_pred, img, depth_gt):
     plt.imshow(depth_pred_rotated, cmap="gray")
     plt.title(f"Predicted depth map")
     plt.axis("off")
+    plt.show()
+
+def show_eval_vectors(depth_pred, depth_gt, img, depth_img):
+    img_rotated = np.transpose(np.rot90(img[0], k=1, axes=[1,2]), [1,2,0]) / 255
+    img_rotated = cv2.cvtColor(img_rotated, cv2.COLOR_YUV2RGB) # Convert back to RGB for display
+
+    print(depth_img.shape)
+    depth_img_rotated = np.rot90(depth_img, k=1)
+
+    cam_half_fov = config.config["cam_hor_FOV"] / 2
+    min_angle = np.deg2rad(-cam_half_fov) * -1 + 0.5*np.pi
+    max_angle = np.deg2rad(cam_half_fov) * -1 + 0.5*np.pi
+    angles = np.linspace(min_angle, max_angle, len(depth_pred),  endpoint=False)
+
+    plt.figure()
+    plt.subplot(2, 2, 1)
+    if config.config["image_mode"] == "L": plt.imshow(img_rotated, cmap="gray")
+    else: plt.imshow(img_rotated)
+    plt.title(f"Original image")
+    plt.axis("off")
+    
+    plt.subplot(2, 2, 3)
+    plt.imshow(depth_img_rotated, cmap="gray")
+    plt.title(f"Depth image ground truth")
+    plt.axis("off")
+
+    plt.subplot(1, 2, 2, projection="polar")
+    plt.plot(angles, depth_pred)
+    plt.plot(angles, depth_gt)
+    plt.title(f"Depth vector visualization")
+    plt.xticks([max_angle, np.pi/2, min_angle], [f"{cam_half_fov}°", f"0°", f"{-cam_half_fov}°"])
+    plt.legend(["Predicted depth", "Ground truth depth"], loc="lower center")
+
     plt.show()
