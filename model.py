@@ -48,8 +48,6 @@ class ShallowDepthModel(nn.Module):
         super(ShallowDepthModel, self).__init__()
         self.input_channels = config.config["input_channels"]
         self.output_channels = config.config["output_channels"]
-        self.height = int(config.config["image_height"] / 8)
-        self.width = int(config.config["image_width"] / 4)
         
         self.encoder1 = MobileNetBlock(self.input_channels, 32)
         self.encoder2 = MobileNetBlock(32, 64)
