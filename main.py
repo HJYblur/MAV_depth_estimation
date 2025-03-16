@@ -23,6 +23,7 @@ def train():
     
     # Load model
     depth_model = model.ShallowDepthModel()
+    # depth_model = model.Mob3DepthModel()
     depth_model.to(device)
     if args.checkpoint:
         depth_model.load_state_dict(torch.load(args.checkpoint))
@@ -96,6 +97,7 @@ def eval(num_imgs, model_id=0):
     model_path = config.config["save_model_path"] + f"/model_{model_id}.pth"
 
     depth_model = model.ShallowDepthModel()
+    # depth_model = model.Mob3DepthModel()
     depth_model.load_state_dict(torch.load(model_path))
     depth_model.eval()
     # depth_model = quantize_dynamic(depth_model, dtype=torch.qint8)
@@ -126,9 +128,12 @@ if __name__ == "__main__":
     args = utils.parse_args()
     if args.mode == "data":
         h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5
-        uyuv_path = config.config["uyvy_path"]
         original_image_path = config.config["image_path"]
         utils.data_preprocess(h5_path, config.config["raw_path"], append=args.add_data)
+
+    elif args.mode == "save_uyvy":
+        uyuv_path = config.config["uyvy_path"]
+        original_image_path = config.config["image_path"]
         utils.convert_images_to_uyvy(original_image_path, uyuv_path)
 
     elif args.mode == "save_yuv":
@@ -140,7 +145,6 @@ if __name__ == "__main__":
         train()
 
     elif args.mode == "eval":
-        config.config["device"] = "cpu"
         eval(num_imgs=3, model_id=args.model_id)
 
     else:

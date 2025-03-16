@@ -2,6 +2,7 @@ import torch
 import config
 import model
 from torch.quantization import quantize_dynamic
+import onnx
 
 def export_to_onnx(model_path, model_id, use_quantization=False):
     config.config["device"] = "cpu" # Always set device to cpu for export, so you don't get errors
@@ -20,15 +21,22 @@ def export_to_onnx(model_path, model_id, use_quantization=False):
     if config.config["input_type_uint8"]:
         dummy_input = torch.randint(0, 256, (1, config.config["input_channels"], 520, 240), dtype=torch.uint8)
     else:
-        dummy_input = 255 * torch.randn(1, config.config["input_channels"], 520, 240)
+        dummy_input = torch.randn(1, config.config["input_channels"], 520, 240)
 
     onnx_model_path = config.config["save_model_path"] + f"/onnx_models/model_{model_id}.onnx"
-    torch.onnx.export(depth_model, dummy_input, onnx_model_path)
+    # torch.onnx.export(depth_model, dummy_input, onnx_model_path)
+
+    onnx_program = torch.onnx.export(depth_model, dummy_input, dynamo=True)
+    onnx_program.optimize()
+    onnx_program.save(onnx_model_path)
 
     print(f"Exported model_{model_id} to ONNX in {onnx_model_path}")
 
+    onnx_model = onnx.load(onnx_model_path)
+    onnx.checker.check_model(onnx_model)
+
 if __name__ == "__main__":
-    model_id = 19
+    model_id = 99
     model_path = config.config["save_model_path"] + f"/model_{model_id}.pth"
 
     export_to_onnx(model_path, model_id, False)

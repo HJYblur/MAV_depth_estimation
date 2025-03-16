@@ -19,7 +19,7 @@ def conv(in_channels, out_channels, kernel_size, stride=1):
     return nn.Sequential(
         nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding, stride=stride),
         nn.BatchNorm2d(out_channels),
-        customReLU()
+        nn.ReLU(inplace=True)
     )
     
 
@@ -35,10 +35,8 @@ class MobileNetBlock(nn.Module):
         
     def forward(self, x):
         x = self.depthwise(x)
-        x = self.relu(x)
         x = self.pointwise(x)
         return x
-    
 
 class ShallowDepthModel(nn.Module):
     '''
@@ -57,7 +55,8 @@ class ShallowDepthModel(nn.Module):
         self.encoder2 = MobileNetBlock(32, 64)
         self.encoder3 = MobileNetBlock(64, 128)
         self.relu = nn.ReLU(inplace=True)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        # self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool = nn.AvgPool2d(kernel_size=2, stride=2)
         self.fc = nn.LazyLinear(self.output_channels)
         
     def forward(self, x):
@@ -79,20 +78,24 @@ class ShallowDepthModel(nn.Module):
     
 
 class Mob3DepthModel(nn.Module):
-    def __init__(self, lin_input_dim=256, output_dim=16):
+    def __init__(self, output_dim=16):
         super(Mob3DepthModel, self).__init__()
+        self.output_channels = config.config["output_channels"]
         
         self.mobilenet = models.mobilenet_v3_small() # 2.5 million params :( Probably not usable 
 
-        self.downsample = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        self.fc = nn.Linear(lin_input_dim, output_dim)
+        self.relu = nn.ReLU(inplace=True)
+
+        self.fc = nn.LazyLinear(self.output_channels)
 
     def forward(self, x):
         x = self.mobilenet(x)
-        x = self.downsample(x)
+        # x = self.pool(x)
 
-        x = torch.flatten(x, start_dim=1)
+        # x = torch.flatten(x, start_dim=1)
+        x = self.relu(x)
         x = self.fc(x)
 
         return x
