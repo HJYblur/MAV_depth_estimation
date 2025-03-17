@@ -13,10 +13,12 @@ import random
 class DepthDataset(Dataset):
     def __init__(self):
         self.uyvy_path = config.config["uyvy_path"]
+        self.yuv_path = config.config["yuv_path"]
         self.image_path = config.config["image_path"]
         self.depth_path = config.config["depth_path"]
         self.image_mode = config.config["image_mode"]
         self.in_type_uint8 = config.config["input_type_uint8"]
+        self.output_channels = config.config["output_channels"]
         
     def __getitem__(self, idx):
         
@@ -26,9 +28,14 @@ class DepthDataset(Dataset):
         elif self.image_mode == "UYVY":
             uyvy_img_path = os.path.join(self.uyvy_path, f"image_{idx:05d}.npy")
             img = self.load_uyvy_tensor(uyvy_img_path)
+        elif self.image_mode == "YUV":
+            yuv_img_path = os.path.join(self.yuv_path, f"image_{idx:05d}.npy")
+            img = self.load_yuv_tensor(yuv_img_path)
         
         depth_matrix = np.load(os.path.join(self.depth_path, f"array_{idx:05d}.npy"))
-        depth_vector = self.extract_center_from_depthmatrix(depth_matrix) # 1 * H
+        # depth_vector = self.extract_center_from_depthmatrix(depth_matrix) # 1 * H
+        depth_vector = extract_depth_vector(depth_matrix, self.output_channels)
+
         # Convert to float tensor
         depth_vector = torch.tensor(depth_vector, dtype=torch.float32)
         
@@ -61,6 +68,15 @@ class DepthDataset(Dataset):
         img = Image.open(path).convert(mode)
         if use_uint8: return T.PILToTensor()(img)
         return T.ToTensor()(img)
+    
+    def load_yuv_tensor(self, path):
+        '''
+            Load yuv image from path and convert to tensor
+        '''
+        yuv = np.load(path, allow_pickle=True)
+        if self.in_type_uint8: yuv = torch.tensor(yuv, dtype=torch.uint8)
+        else: yuv = torch.tensor(yuv, dtype=torch.float32)
+        return yuv     
 
 
     def extract_center_from_depthmatrix(self, depth_matrix):
@@ -83,6 +99,34 @@ def extract_center_from_depthmap(batch_depth_map):
     downsampled_depth = downsampled_depth.squeeze(1) # N * H/8x
     # print(f"Extracted center depth shape: {downsampled_depth.shape}")
     return downsampled_depth
+
+def extract_depth_vector(depth_image, output_size):
+    """
+    Extracts a depth vector from the center column of a depth image.
+    Each value in the vector represents the minimum depth value in a section of the image.
+    
+    Parameters:
+    depth_image (numpy.ndarray): A 2D array representing the depth image.
+
+    Returns:
+    numpy.ndarray: A 1D array of length 16 containing minimum depth values for each section.
+    """
+    height, width = depth_image.shape
+    center_x = width // 2
+    margin = int(0.15 * width)  # +/-15% margin of total width
+    depth_vector = np.zeros(output_size)
+    
+    for i in range(output_size):
+        y_start = (i * height) // output_size
+        y_end = ((i + 1) * height) // output_size
+        
+        # Extract the region of interest (ROI) around the center column
+        roi = depth_image[y_start:y_end, max(0, center_x - margin):min(width, center_x + margin)]
+        
+        # Find the minimum depth value in this section
+        depth_vector[i] = np.max(roi)
+    
+    return depth_vector
 
 
 def load_train_val_dataset():
@@ -122,7 +166,7 @@ def load_eval_dataset(num_imgs):
         num_workers=config.config["num_workers"]
         )
     
-    return eval_data_loader
+    return eval_data_loader, random_indices
 
 
 def yuv2rgb(im):

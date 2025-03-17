@@ -134,6 +134,38 @@ def convert_images_to_uyvy(input_folder, output_folder):
     print(f"All {len(os.listdir(input_folder))} images converted to UYVY format.")
 
 
+def convert_images_to_yuv(input_folder, output_folder):
+    """
+    Converts all RGB images in the input folder to YUV format and saves them as .npy files.
+
+    Args:
+        input_folder (str): Path to the folder containing input RGBD images.
+        output_folder (str): Path to save YUV .npy files.
+    """
+    os.makedirs(output_folder, exist_ok=True)
+
+    for fname in sorted(os.listdir(input_folder)):
+        if not fname.lower().endswith(('.png', '.jpg', '.jpeg')):
+            continue
+
+        img_path = os.path.join(input_folder, fname)
+        img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
+
+        if img is None or img.shape[2] < 3:
+            print(f"Skipping {fname}: not a valid RGB image.")
+            continue
+
+        base_name = os.path.splitext(fname)[0]
+        rgb = img[:, :, :3]
+
+        # Convert RGB (OpenCV BGR) to YUV
+        yuv = cv2.cvtColor(rgb, cv2.COLOR_BGR2YUV)
+        yuv = np.transpose(yuv, (2, 0, 1))
+        yuv = yuv.astype(np.uint8)
+
+        np.save(os.path.join(output_folder, f"{base_name}.npy"), yuv)
+
+
 def depth_checker():
     depth_path = config.config["depth_path"]
     random_index = random.randint(0, len(os.listdir(depth_path)))
@@ -254,26 +286,11 @@ def show_eval_images(depth_pred, img, depth_gt):
     plt.axis("off")
     plt.show()
 
-def visualize_depth_vector(depth_vector, plot_axis=None):
-    cam_half_fov = config.config["cam_hor_FOV"] / 2
-    min_angle = np.deg2rad(-cam_half_fov) * -1 + 0.5*np.pi
-    max_angle = np.deg2rad(cam_half_fov) * -1 + 0.5*np.pi
-    angles = np.linspace(min_angle, max_angle, len(depth_vector),  endpoint=False)
-
-    fig, plot_axis = plt.subplots(subplot_kw={'projection': 'polar'})
-
-    plot_axis.plot(angles, depth_vector, linewidth=2, linestyle='solid')
-    plot_axis.set_yticklabels([])  # Hide radial ticks
-    plot_axis.set_xticks([max_angle,min_angle])  # Show angular ticks
-    plot_axis.set_xticklabels([cam_half_fov, -cam_half_fov])  # Label the angles as degrees
-
-    if plot_axis is not None: plt.show()
-
-    return plot_axis
-
 def show_eval_vectors(depth_pred, depth_gt, img, depth_img):
-    img_rotated = np.rot90(img[0], k=1, axes=[1,2])[0]
-    depth_img_rotated = np.rot90(depth_img[0], k=1, axes=[1,2])[0]
+    img_rotated = np.transpose(np.rot90(img[0], k=1, axes=[1,2]), [1,2,0]) / 255
+    img_rotated = cv2.cvtColor(img_rotated, cv2.COLOR_YUV2RGB) # Convert back to RGB for display
+
+    depth_img_rotated = np.rot90(depth_img, k=1)
 
     cam_half_fov = config.config["cam_hor_FOV"] / 2
     min_angle = np.deg2rad(-cam_half_fov) * -1 + 0.5*np.pi

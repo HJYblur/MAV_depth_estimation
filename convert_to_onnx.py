@@ -2,6 +2,7 @@ import torch
 import config
 import model
 from torch.quantization import quantize_dynamic
+import onnx
 
 def export_to_onnx(model_path, model_id, use_quantization=False):
     config.config["device"] = "cpu" # Always set device to cpu for export, so you don't get errors
@@ -30,8 +31,11 @@ def export_to_onnx(model_path, model_id, use_quantization=False):
 
     print(f"Exported model_{model_id} to ONNX in {onnx_model_path}")
 
+    onnx_model = onnx.load(onnx_model_path)
+    onnx.checker.check_model(onnx_model)
+
 if __name__ == "__main__":
-    model_id = 9
+    model_id = 99
     model_path = config.config["save_model_path"] + f"/model_{model_id}.pth"
 
     export_to_onnx(model_path, model_id, False)

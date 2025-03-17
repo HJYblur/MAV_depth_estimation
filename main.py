@@ -6,6 +6,7 @@ from tqdm import tqdm
 import config, utils, model, dataset
 import time
 from torch.quantization import quantize_dynamic
+import numpy as np
 
 def train():
     # Set up logging & device
@@ -22,10 +23,10 @@ def train():
     
     # Load model
     depth_model = model.ShallowDepthModel()
+    # depth_model = model.Mob3DepthModel()
     depth_model.to(device)
     if args.checkpoint:
         depth_model.load_state_dict(torch.load(args.checkpoint))
-    print(f"Number of parameters: {depth_model.compute_parameters()}")
     
     # Loss function & optimizer
     loss = nn.MSELoss()
@@ -45,7 +46,7 @@ def train():
             # print(f"img: {img.shape}, depth_vec: {depth_vec.shape}")
             
             optimizer.zero_grad()
-            pred_depth = depth_model(img) 
+            pred_depth = depth_model(img)
             loss_train = loss(pred_depth, depth_vec)
             # print(f"pred_depth: {pred_depth.shape}, depth_vector: {depth_vector.shape}")
             loss_train.backward()
@@ -82,40 +83,46 @@ def train():
         logger.info("Training complete.")
         writer.close()
 
+    print(f"Number of parameters: {depth_model.compute_parameters()}")
+
 
 def eval(num_imgs, model_id=0):
     '''
     Pick some random input images and run depth estimation on it
     '''
     config.config["device"] = "cpu"
+    depth_path = config.config["depth_path"]
 
     # Load model
     model_path = config.config["save_model_path"] + f"/model_{model_id}.pth"
 
     depth_model = model.ShallowDepthModel()
-    depth_model.load_state_dict(torch.load(model_path))
+    # depth_model = model.Mob3DepthModel()
+    depth_model.load_state_dict(torch.load(model_path, map_location=config.config["device"]))
     depth_model.eval()
     # depth_model = quantize_dynamic(depth_model, dtype=torch.qint8)
  
-    # print(f"Number of parameters: {depth_model.compute_parameters()}")
+    print(f"Number of parameters: {depth_model.compute_parameters()}")
 
     # Load images
-    eval_loader = dataset.load_eval_dataset(num_imgs)
+    eval_loader, random_indices = dataset.load_eval_dataset(num_imgs)
 
     # Run depth estimation
     with torch.no_grad():
-        for i, (img, depth_img) in enumerate(eval_loader):
+        for i, (img, depth_gt) in enumerate(eval_loader):
             # Run model
             start_time = time.time()
             depth_pred = depth_model(img)
-            
             print(f"Inference time: {time.time() - start_time:.2f} seconds")
+
+            # np.savetxt("/home/pietb/test_model/test_img.txt", img.numpy().reshape(-1), fmt="%.6f")
+
             # print(f"Depth prediction: {depth_pred}")
-            max_depth, max_indices = torch.max(depth_pred, dim=1)
-            print(f"Predicted depth & position: {max_depth}, {max_indices / config.config['output_channels']}")
+            # max_depth, max_indices = torch.max(depth_pred, dim=1)
+            # print(f"Predicted depth & position: {max_depth}, {max_indices / config.config['output_channels']}")
+
+            depth_img = np.load(os.path.join(depth_path, f"array_{random_indices[i]:05d}.npy"))
             
-            # utils.visualize_depth_vector(depth_pred[0])
-            depth_gt = dataset.extract_center_from_depthmap(depth_img)
             utils.show_eval_vectors(depth_pred[0], depth_gt[0], img, depth_img)
 
     
@@ -123,14 +130,25 @@ if __name__ == "__main__":
     args = utils.parse_args()
     if args.mode == "data":
         h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5
-        uyuv_path = config.config["uyvy_path"]
         original_image_path = config.config["image_path"]
         utils.data_preprocess(h5_path, config.config["raw_path"], append=args.add_data)
+
+    elif args.mode == "save_uyvy":
+        uyuv_path = config.config["uyvy_path"]
+        original_image_path = config.config["image_path"]
         utils.convert_images_to_uyvy(original_image_path, uyuv_path)
+
+    elif args.mode == "save_yuv":
+        yuv_path = config.config["yuv_path"]
+        original_image_path = config.config["image_path"]
+        utils.convert_images_to_yuv(original_image_path, yuv_path)
+
     elif args.mode == "train":
         train()
+
     elif args.mode == "eval":
-        eval(num_imgs=10, model_id=args.model_id)
+        eval(num_imgs=1, model_id=args.model_id)
+
     else:
         h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5
         utils.h5_checker(h5_path)

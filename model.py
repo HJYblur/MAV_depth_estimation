@@ -2,6 +2,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.models as models
 import config
 
 
@@ -18,7 +19,7 @@ def conv(in_channels, out_channels, kernel_size, stride=1):
     return nn.Sequential(
         nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding, stride=stride),
         nn.BatchNorm2d(out_channels),
-        customReLU()
+        nn.ReLU(inplace=True)
     )
     
 
@@ -26,16 +27,16 @@ class MobileNetBlock(nn.Module):
     '''
         Adapt from MobileNet to save computational resources
     '''
-    def __init__(self, in_channels, out_channels, stride = 1):
+    def __init__(self, in_channels, out_channels, stride = 2):
         super(MobileNetBlock, self).__init__()
         self.depthwise = conv(in_channels, in_channels, 3, stride) # Capturing spatial information
         self.pointwise = conv(in_channels, out_channels, 1) # Increasing the depth
+        self.relu = nn.ReLU(inplace=True)
         
     def forward(self, x):
         x = self.depthwise(x)
         x = self.pointwise(x)
         return x
-    
 
 class ShallowDepthModel(nn.Module):
     '''
@@ -48,20 +49,53 @@ class ShallowDepthModel(nn.Module):
         self.input_channels = config.config["input_channels"]
         self.output_channels = config.config["output_channels"]
         
-        self.encoder1 = MobileNetBlock(self.input_channels, 16)
-        self.encoder2 = MobileNetBlock(16, 32)
-        self.encoder3 = MobileNetBlock(32, 64)
-        self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(64, self.output_channels)
+        self.encoder1 = MobileNetBlock(self.input_channels, 32)
+        self.encoder2 = MobileNetBlock(32, 64)
+        self.encoder3 = MobileNetBlock(64, 128)
+        self.relu = nn.ReLU(inplace=True)
+        # self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool = nn.AvgPool2d(kernel_size=2, stride=2)
+        self.fc = nn.LazyLinear(self.output_channels)
         
     def forward(self, x):
-        # x: N * 3 * H * W
-        x = self.encoder1(x) # N * 16 * H * W
-        x = self.encoder2(x) # N * 32 * H * W
-        x = self.encoder3(x) # N * 64 * H * W
-        x = self.pool(x) # N * 64 * 1 * 1
-        x = x.view(x.size(0), -1) # N * 64
-        x = self.fc(x) # N * W
+        x = self.encoder1(x)
+        x = self.pool(x)
+        x = self.relu(x)
+        x = self.encoder2(x)
+        x = self.pool(x)
+        x = self.relu(x)
+        x = self.encoder3(x)
+        x = self.pool(x)
+        x = torch.flatten(x, start_dim=1)
+        x = self.relu(x)
+        x = self.fc(x)
+        return x
+    
+    def compute_parameters(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+    
+
+class Mob3DepthModel(nn.Module):
+    def __init__(self, output_dim=16):
+        super(Mob3DepthModel, self).__init__()
+        self.output_channels = config.config["output_channels"]
+        
+        self.mobilenet = models.mobilenet_v3_small() # 2.5 million params :( Probably not usable 
+
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        self.relu = nn.ReLU(inplace=True)
+
+        self.fc = nn.LazyLinear(self.output_channels)
+
+    def forward(self, x):
+        x = self.mobilenet(x)
+        # x = self.pool(x)
+
+        # x = torch.flatten(x, start_dim=1)
+        x = self.relu(x)
+        x = self.fc(x)
+
         return x
     
     def compute_parameters(self):
