@@ -115,6 +115,8 @@ def eval(num_imgs, model_id=0):
             depth_pred = depth_model(img)
             print(f"Inference time: {time.time() - start_time:.2f} seconds")
 
+            # np.savetxt("/home/pietb/test_model/test_img.txt", img.numpy().reshape(-1), fmt="%.6f")
+
             # print(f"Depth prediction: {depth_pred}")
             # max_depth, max_indices = torch.max(depth_pred, dim=1)
             # print(f"Predicted depth & position: {max_depth}, {max_indices / config.config['output_channels']}")
@@ -145,7 +147,7 @@ if __name__ == "__main__":
         train()
 
     elif args.mode == "eval":
-        eval(num_imgs=3, model_id=args.model_id)
+        eval(num_imgs=1, model_id=args.model_id)
 
     else:
         h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5
