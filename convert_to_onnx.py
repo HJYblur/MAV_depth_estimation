@@ -20,9 +20,9 @@ def export_to_onnx(model_path, model_id, use_quantization=False):
 
     # Export to ONNX
     if config.config["input_type_uint8"]:
-        dummy_input = torch.randint(0, 256, (1, config.config["input_channels"], img_width, img_height * 2), dtype=torch.uint8)
+        dummy_input = torch.randint(0, 256, (1, config.config["input_channels"], img_width, img_height), dtype=torch.uint8)
     else:
-        dummy_input = torch.randn(1, config.config["input_channels"], img_width, img_height * 2)
+        dummy_input = torch.randn(1, config.config["input_channels"], img_width, img_height)
 
     onnx_model_path = config.config["save_model_path"] + f"/onnx_models/model_{model_id}.onnx"
     onnx_program = torch.onnx.export(depth_model, dummy_input, dynamo=True)

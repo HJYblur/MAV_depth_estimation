@@ -5,7 +5,7 @@ config = {
     # Model training configurations
     "device": "cuda" if torch.cuda.is_available() else "cpu",
     "epochs": 100,
-    "batch_size": 6, # For test, use a smaller batch size
+    "batch_size": 8, # For test, use a smaller batch size
     "train_val_split": 0.8,
     "learning_rate": 0.001,
     "weight_decay": 0.0001,
