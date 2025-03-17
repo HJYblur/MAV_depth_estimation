@@ -98,7 +98,7 @@ def eval(num_imgs, model_id=0):
 
     depth_model = model.ShallowDepthModel()
     # depth_model = model.Mob3DepthModel()
-    depth_model.load_state_dict(torch.load(model_path))
+    depth_model.load_state_dict(torch.load(model_path, map_location=config.config["device"]))
     depth_model.eval()
     # depth_model = quantize_dynamic(depth_model, dtype=torch.qint8)
  
