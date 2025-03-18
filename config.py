@@ -23,7 +23,7 @@ config = {
     'image_height': 520,
     "image_mode": "YUV", # "RGB" or "L" (grayscale) or "UYVY" or "YUV"
     "input_type_uint8": False,
-    "cam_hor_FOV": 100,
+    "cam_hor_FOV": 115, # In degrees. Yes, I measured :)
     
     # Model configurations
     "input_channels": 3, # 3 for RGB, 1 for grayscale, 1 for uyuv(1*H*2W), 3 for yuv
