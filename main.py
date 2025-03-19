@@ -27,7 +27,6 @@ def train():
     if args.checkpoint:
         depth_model.load_state_dict(torch.load(args.checkpoint))
     
-    # print(f"Number of parameters: {depth_model.compute_parameters()}")
     
     # Loss function & optimizer
     loss = nn.MSELoss()
@@ -83,6 +82,8 @@ def train():
     if logging_on:
         logger.info("Training complete.")
         writer.close()
+        
+    print(f"Number of parameters: {depth_model.compute_parameters()}")
 
 
 
