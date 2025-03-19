@@ -23,10 +23,11 @@ def train():
     
     # Load model
     depth_model = model.ShallowDepthModel()
-    # depth_model = model.Mob3DepthModel()
     depth_model.to(device)
     if args.checkpoint:
         depth_model.load_state_dict(torch.load(args.checkpoint))
+    
+    # print(f"Number of parameters: {depth_model.compute_parameters()}")
     
     # Loss function & optimizer
     loss = nn.MSELoss()
@@ -83,7 +84,6 @@ def train():
         logger.info("Training complete.")
         writer.close()
 
-    print(f"Number of parameters: {depth_model.compute_parameters()}")
 
 
 def eval(num_imgs, model_id=0):
