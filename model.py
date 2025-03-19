@@ -55,6 +55,7 @@ class ShallowDepthModel(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         # self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.pool = nn.AvgPool2d(kernel_size=2, stride=2)
+        self.dropout = nn.Dropout(p = 0.5)
         self.fc = nn.LazyLinear(self.output_channels)
         
     def forward(self, x):
@@ -68,6 +69,7 @@ class ShallowDepthModel(nn.Module):
         x = self.pool(x)
         x = torch.flatten(x, start_dim=1)
         x = self.relu(x)
+        x = self.dropout(x)
         x = self.fc(x)
         return x
     
