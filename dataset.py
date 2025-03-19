@@ -11,7 +11,7 @@ import random
 
 
 class DepthDataset(Dataset):
-    def __init__(self):
+    def __init__(self, transform):
         self.uyvy_path = config.config["uyvy_path"]
         self.yuv_path = config.config["yuv_path"]
         self.image_path = config.config["image_path"]
@@ -19,6 +19,7 @@ class DepthDataset(Dataset):
         self.image_mode = config.config["image_mode"]
         self.in_type_uint8 = config.config["input_type_uint8"]
         self.output_channels = config.config["output_channels"]
+        self.transform = transform if transform else None
         
     def __getitem__(self, idx):
         
@@ -30,7 +31,7 @@ class DepthDataset(Dataset):
             img = self.load_uyvy_tensor(uyvy_img_path)
         elif self.image_mode == "YUV":
             yuv_img_path = os.path.join(self.yuv_path, f"image_{idx:05d}.npy")
-            img = self.load_yuv_tensor(yuv_img_path)
+            img = self.load_yuv_tensor(yuv_img_path, self.transform)
         
         depth_matrix = np.load(os.path.join(self.depth_path, f"array_{idx:05d}.npy"))
         # depth_vector = self.extract_center_from_depthmatrix(depth_matrix) # 1 * H
@@ -42,9 +43,8 @@ class DepthDataset(Dataset):
         return img, depth_vector
         
     def __len__(self):
-        # There's a hidden file called ".DS_store" (some mac thing) which means this method counts 1 more image
-        # if you don't do -1
-        return len(os.listdir(self.image_path)) - 1
+        # There's a hidden file called ".DS_store" (some mac thing)
+        return len([f for f in os.listdir(self.image_path) if f.endswith('.jpg')])
    
    
     def load_uyvy_tensor(self, path):
@@ -69,13 +69,17 @@ class DepthDataset(Dataset):
         if use_uint8: return T.PILToTensor()(img)
         return T.ToTensor()(img)
     
-    def load_yuv_tensor(self, path):
+    def load_yuv_tensor(self, path, transform):
         '''
             Load yuv image from path and convert to tensor
         '''
         yuv = np.load(path, allow_pickle=True)
-        if self.in_type_uint8: yuv = torch.tensor(yuv, dtype=torch.uint8)
-        else: yuv = torch.tensor(yuv, dtype=torch.float32)
+        if self.in_type_uint8:
+            yuv = torch.tensor(yuv, dtype=torch.uint8)
+        else: 
+            yuv = torch.tensor(yuv, dtype=torch.float32)
+        if transform:
+            yuv = transform(yuv)
         return yuv     
 
 
@@ -99,6 +103,7 @@ def extract_center_from_depthmap(batch_depth_map):
     downsampled_depth = downsampled_depth.squeeze(1) # N * H/8x
     # print(f"Extracted center depth shape: {downsampled_depth.shape}")
     return downsampled_depth
+
 
 def extract_depth_vector(depth_image, output_size):
     """
@@ -133,9 +138,15 @@ def load_train_val_dataset():
     '''
         Load dataset from config file
     '''
-    dataset = DepthDataset()
+    train_transform = T.Compose([
+         T.RandomRotation(degrees=5),
+         T.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2)
+     ])
+    
+    dataset = DepthDataset(train_transform)
     ratio = config.config["train_val_split"]
     train_dataset, val_dataset = torch.utils.data.random_split(dataset, [ratio, 1 - ratio])
+ 
     train_dataloader = DataLoader(
         train_dataset, 
         batch_size=config.config["batch_size"], 
