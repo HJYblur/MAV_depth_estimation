@@ -151,8 +151,5 @@ if __name__ == "__main__":
         eval(num_imgs=1, model_id=args.model_id)
 
     else:
-        h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5
-        utils.h5_checker(h5_path)
-        # utils.depth_checker()
-        # utils.load_comparison()
-        # raise ValueError("Invalid mode. Please choose 'train' or 'eval'.")
+        raw_path = config.config["raw_path"]
+        dataset.image_checker(raw_path)

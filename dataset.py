@@ -233,3 +233,11 @@ def rgb2yuv(rgb):
     yuv[:,:,1] = U
     yuv[:,:,2] = V
     return yuv
+
+
+def image_checker(img_path):
+    for file in os.listdir(img_path):
+        img = Image.open(os.path.join(img_path, file))
+        if img.size != (config.config["image_width"] * 2, config.config["image_height"] * 2):
+            print(f"Image {file} has size {img.size}")
+            return False
