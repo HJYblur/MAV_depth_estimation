@@ -37,6 +37,8 @@ class DepthDataset(Dataset):
 
             if img.shape[1] != self.image_height: img = img[:, 1:,:] # Some of Tim's images have height > 520 ...
 
+        img = self.downsample_image(img) #downsampling image here instead
+
         with h5py.File(self.h5_path, "r") as f:
             depth_matrix = f[list(f.keys())[idx]][:]
             depth_matrix = depth_matrix / 255.0
@@ -72,7 +74,7 @@ class DepthDataset(Dataset):
             Load image from path and convert to tensor
         '''
         img = Image.open(path).convert(mode)
-        img = img.resize((img.width // 2, img.height // 2), Image.ANTIALIAS)  # downsampling.
+        #img = img.resize((img.width // 2, img.height // 2), Image.ANTIALIAS)  # downsampling.
         if use_uint8: return T.PILToTensor()(img)
         return T.ToTensor()(img)
     
@@ -84,6 +86,24 @@ class DepthDataset(Dataset):
         if self.in_type_uint8: yuv = torch.tensor(yuv, dtype=torch.uint8)
         else: yuv = torch.tensor(yuv, dtype=torch.float32)
         return yuv
+
+
+    def downsample_image(img):
+        if img.dim() == 2:  # If the image is (H, W), add a channel dimension
+            img = img.unsqueeze(0)  # Shape: (1, H, W)
+        elif img.dim() == 3:  # If the image is (C, H, W), leave it as is
+            pass
+        else:
+            raise ValueError(f"Input tensor must have 2 or 3 dimensions, but got {img.dim()} dimensions.")
+
+        # Downsample using average pooling with kernel_size=2 and stride=2
+        img = img.unsqueeze(0)  # Add batch dimension for pooling: (1, C, H, W)
+        img = F.avg_pool2d(img, kernel_size=2, stride=2)  # Shape: (1, C, H//2, W//2)
+        img = img.squeeze(0)  # Remove batch dimension: (C, H//2, W//2)
+        return img
+
+
+
 
 
     def extract_center_from_depthmatrix(self, depth_matrix):
