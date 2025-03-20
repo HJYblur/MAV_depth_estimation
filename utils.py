@@ -57,7 +57,8 @@ def data_preprocess(h5_path, raw_image_path, append = True):
     image_path = config.config["image_path"]
     os.makedirs(depth_path, exist_ok=True)
     os.makedirs(image_path, exist_ok=True)
-    
+
+    print(len(os.listdir(image_path)), len(os.listdir(depth_path)))
     assert len(os.listdir(image_path)) == len(os.listdir(depth_path)), "Number of images and depth maps do not match"
     prev_index = len(os.listdir(depth_path)) if append else 0
     print(f"Previous index: {prev_index}")

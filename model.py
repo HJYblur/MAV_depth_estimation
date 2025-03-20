@@ -49,13 +49,15 @@ class ShallowDepthModel(nn.Module):
         self.input_channels = config.config["input_channels"]
         self.output_channels = config.config["output_channels"]
         
-        self.encoder1 = MobileNetBlock(self.input_channels, 16)
-        self.encoder2 = MobileNetBlock(16, 32)
-        self.encoder3 = MobileNetBlock(32, 64)
+        self.encoder1 = MobileNetBlock(self.input_channels, 12) #CHANGED NUMBER OF FILTERS
+        self.encoder2 = MobileNetBlock(12, 24)
+        self.encoder3 = MobileNetBlock(24, 48)
         self.relu = nn.ReLU(inplace=True)
         # self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.pool = nn.AvgPool2d(kernel_size=2, stride=2)
-        self.dropout = nn.Dropout(p = 0.5)
+        # self.pool = nn.AvgPool2d(kernel_size=2, stride=2)
+        self.pool = nn.AdaptiveAvgPool2d(1,1) #If this works through ONNX, otherwise use line below
+        # self.pool = nn.AvgPool2d(kernel_size=4, stride = 4)
+        self.dropout = nn.Dropout(p = 0.5) #if needs to be even faster, try reducing to 0.3.  
         self.fc = nn.LazyLinear(self.output_channels)
         
     def forward(self, x):
