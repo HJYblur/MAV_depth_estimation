@@ -69,6 +69,7 @@ class ShallowDepthModel(nn.Module):
         x = torch.flatten(x, start_dim=1)
         x = self.relu(x)
         x = self.fc(x)
+        x = torch.clamp(x, 0, 1)
         return x
     
     def compute_parameters(self):

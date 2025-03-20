@@ -5,8 +5,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import config, utils, model, dataset
 import time
-from torch.quantization import quantize_dynamic
-import numpy as np
+import h5py
 
 def train():
     # Set up logging & device
@@ -39,49 +38,53 @@ def train():
     
     best_loss = float("inf")
     counter = 0
-    for epoch in range(config.config["epochs"]):
-        # Training loop
-        for i, (img, depth_vec) in tqdm(enumerate(train_loader)):
-            img, depth_vec = img.to(device), depth_vec.to(device)
-            # print(f"img: {img.shape}, depth_vec: {depth_vec.shape}")
+
+    try:
+        for epoch in range(config.config["epochs"]):
+            # Training loop
+            for i, (img, depth_vec) in tqdm(enumerate(train_loader)):
+                if i > 1000: break
+                img, depth_vec = img.to(device), depth_vec.to(device)
+                
+                optimizer.zero_grad()
+                pred_depth = depth_model(img)
+                loss_train = loss(pred_depth, depth_vec)
+                loss_train.backward()
+                optimizer.step()
+                
+                if i % 10 == 0 and logging_on:
+                    logger.info(f"Epoch {epoch}, Iteration {i}, Loss: {loss_train.item()}")
+                    writer.add_scalar("Loss/train", loss_train.item(), epoch * len(train_loader) + i)
             
-            optimizer.zero_grad()
-            pred_depth = depth_model(img)
-            loss_train = loss(pred_depth, depth_vec)
-            # print(f"pred_depth: {pred_depth.shape}, depth_vector: {depth_vector.shape}")
-            loss_train.backward()
-            optimizer.step()
+            torch.save(depth_model.state_dict(), os.path.join(config.config["save_model_path"], f"model_{epoch}.pth"))
             
-            if i % 10 == 0 and logging_on:
-                logger.info(f"Epoch {epoch}, Iteration {i}, Loss: {loss_train.item()}")
-                writer.add_scalar("Loss/train", loss_train.item(), epoch * len(train_loader) + i)
-        
-        torch.save(depth_model.state_dict(), os.path.join(config.config["save_model_path"], f"model_{epoch}.pth"))
-        
-        # Validation loop
-        depth_model.eval()
-        for i, (img, depth_vec) in enumerate(val_loader):
-            img, depth_vec = img.to(device), depth_vec.to(device)
-            
-            pred_depth = depth_model(img)
-            loss_val = loss(pred_depth, depth_vec)
-            
-            if i % 10 == 0 & logging_on:
-                logger.info(f"Epoch {epoch}, Iteration {i}, Val Loss: {loss_val.item()}")
-                writer.add_scalar("Loss/val", loss_val.item(), epoch * len(val_loader) + i)
-            
-            # Early stopping
-            # if loss_val < best_loss:
-            #     best_loss = loss_val
-            #     counter = 0
-            # else:
-            #     counter += 1
-            #     if counter > config.config["patience"]:
-            #         if logging_on: logger.info(f"Early stopping at epoch {epoch}.")
-            #         break
-    if logging_on:
-        logger.info("Training complete.")
-        writer.close()
+            # Validation loop
+            depth_model.eval()
+            for i, (img, depth_vec) in enumerate(val_loader):
+                img, depth_vec = img.to(device), depth_vec.to(device)
+                
+                pred_depth = depth_model(img)
+                loss_val = loss(pred_depth, depth_vec)
+                
+                if i % 10 == 0 & logging_on:
+                    logger.info(f"Epoch {epoch}, Iteration {i}, Val Loss: {loss_val.item()}")
+                    writer.add_scalar("Loss/val", loss_val.item(), epoch * len(val_loader) + i)
+                
+                # Early stopping
+                # if loss_val < best_loss:
+                #     best_loss = loss_val
+                #     counter = 0
+                # else:
+                #     counter += 1
+                #     if counter > config.config["patience"]:
+                #         if logging_on: logger.info(f"Early stopping at epoch {epoch}.")
+                #         break
+        if logging_on:
+            logger.info("Training complete.")
+            writer.close()
+    except KeyboardInterrupt:
+        print("Training interrupted. Saving model...")
+        torch.save(depth_model.state_dict(), os.path.join(config.config["save_model_path"], "model_interrupt.pth"))
 
     print(f"Number of parameters: {depth_model.compute_parameters()}")
 
@@ -91,16 +94,13 @@ def eval(num_imgs, model_id=0):
     Pick some random input images and run depth estimation on it
     '''
     config.config["device"] = "cpu"
-    depth_path = config.config["depth_path"]
 
     # Load model
     model_path = config.config["save_model_path"] + f"/model_{model_id}.pth"
 
     depth_model = model.ShallowDepthModel()
-    # depth_model = model.Mob3DepthModel()
     depth_model.load_state_dict(torch.load(model_path, map_location=config.config["device"]))
     depth_model.eval()
-    # depth_model = quantize_dynamic(depth_model, dtype=torch.qint8)
  
     print(f"Number of parameters: {depth_model.compute_parameters()}")
 
@@ -113,15 +113,12 @@ def eval(num_imgs, model_id=0):
             # Run model
             start_time = time.time()
             depth_pred = depth_model(img)
+            print(depth_pred)
             print(f"Inference time: {time.time() - start_time:.2f} seconds")
 
-            # np.savetxt("/home/pietb/test_model/test_img.txt", img.numpy().reshape(-1), fmt="%.6f")
-
-            # print(f"Depth prediction: {depth_pred}")
-            # max_depth, max_indices = torch.max(depth_pred, dim=1)
-            # print(f"Predicted depth & position: {max_depth}, {max_indices / config.config['output_channels']}")
-
-            depth_img = np.load(os.path.join(depth_path, f"array_{random_indices[i]:05d}.npy"))
+            with h5py.File(config.config["h5_path"], "r") as f:
+                depth_img = f[list(f.keys())[random_indices[i]]][:]
+                depth_img = depth_img / 255.0
             
             utils.show_eval_vectors(depth_pred[0], depth_gt[0], img, depth_img)
 
