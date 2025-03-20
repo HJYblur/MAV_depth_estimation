@@ -31,7 +31,7 @@ Make sure you have all the original image under the 'data/original_image' folder
 
 To convert the raw data from h5 file format to depth tensor, run the following command:
 
-`python main.py --mode data`
+`python main.py --mode data --h5file "The real h5 file name"`
 
 To convert the original image to yuv format, run the following command: 
 
