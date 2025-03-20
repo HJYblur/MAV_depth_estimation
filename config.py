@@ -19,8 +19,8 @@ config = {
     'depth_path': 'data/depth_matrix',
     'uyvy_path': 'data/uyvy',
     "yuv_path": "data/yuv",
-    'image_width': 240,
-    'image_height': 520,
+    'image_width': 120, #240 --> 120
+    'image_height': 260, #520 --> 260 
     "image_mode": "YUV", # "RGB" or "L" (grayscale) or "UYVY" or "YUV"
     "input_type_uint8": False,
     "cam_hor_FOV": 100,

@@ -72,6 +72,7 @@ class DepthDataset(Dataset):
             Load image from path and convert to tensor
         '''
         img = Image.open(path).convert(mode)
+        img = img.resize((img.width // 2, img.height // 2), Image.ANTIALIAS)  # downsampling.
         if use_uint8: return T.PILToTensor()(img)
         return T.ToTensor()(img)
     
