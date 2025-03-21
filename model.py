@@ -49,9 +49,9 @@ class ShallowDepthModel(nn.Module):
         self.input_channels = config.config["input_channels"]
         self.output_channels = config.config["output_channels"]
         
-        self.encoder1 = MobileNetBlock(self.input_channels, 32)
-        self.encoder2 = MobileNetBlock(32, 64)
-        self.encoder3 = MobileNetBlock(64, 128)
+        self.encoder1 = MobileNetBlock(self.input_channels, 16)
+        self.encoder2 = MobileNetBlock(16, 32)
+        self.encoder3 = MobileNetBlock(32, 64)
         self.relu = nn.ReLU(inplace=True)
         # self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.pool = nn.AvgPool2d(kernel_size=2, stride=2)
@@ -69,7 +69,6 @@ class ShallowDepthModel(nn.Module):
         x = torch.flatten(x, start_dim=1)
         x = self.relu(x)
         x = self.fc(x)
-        x = torch.clamp(x, 0, 1)
         return x
     
     def compute_parameters(self):

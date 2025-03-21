@@ -4,12 +4,12 @@ import torch
 config = {
     # Model training configurations
     "device": "cuda" if torch.cuda.is_available() else "cpu",
-    "epochs": 4,
-    "batch_size": 128, # For test, use a smaller batch size
+    "epochs": 5,
+    "batch_size": 256,
     "train_val_split": 0.8,
     "learning_rate": 0.001,
     "weight_decay": 0.0001,
-    "num_workers": 4, # Number of CPU workers for data loading, small for test
+    "num_workers": 4, # Number of CPU workers for data loading
     "patience": 5, # Early stopping patience
     
     # Data 
@@ -24,6 +24,7 @@ config = {
     "image_mode": "YUV", # "RGB" or "L" (grayscale) or "UYVY" or "YUV"
     "input_type_uint8": False,
     "cam_hor_FOV": 100,
+    "downsample_fac": 2,
     
     # Model configurations
     "input_channels": 3, # 3 for RGB, 1 for grayscale, 1 for uyuv(1*H*2W), 3 for yuv

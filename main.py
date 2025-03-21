@@ -144,7 +144,7 @@ if __name__ == "__main__":
         train()
 
     elif args.mode == "eval":
-        eval(num_imgs=1, model_id=args.model_id)
+        eval(num_imgs=5, model_id=args.model_id)
 
     else:
         h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5

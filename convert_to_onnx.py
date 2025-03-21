@@ -6,6 +6,7 @@ import onnx
 
 def export_to_onnx(model_path, model_id, use_quantization=False):
     config.config["device"] = "cpu" # Always set device to cpu for export, so you don't get errors
+    downsample_fac = config.config["downsample_fac"]
 
     depth_model = model.ShallowDepthModel()
     depth_model.load_state_dict(torch.load(model_path))
@@ -21,7 +22,7 @@ def export_to_onnx(model_path, model_id, use_quantization=False):
     if config.config["input_type_uint8"]:
         dummy_input = torch.randint(0, 256, (1, config.config["input_channels"], 520, 240), dtype=torch.uint8)
     else:
-        dummy_input = torch.randn(1, config.config["input_channels"], 520, 240)
+        dummy_input = torch.randn(1, config.config["input_channels"], 520//downsample_fac, 240//downsample_fac)
 
     onnx_model_path = config.config["save_model_path"] + f"/onnx_models/model_{model_id}.onnx"
     # torch.onnx.export(depth_model, dummy_input, onnx_model_path)
@@ -36,7 +37,7 @@ def export_to_onnx(model_path, model_id, use_quantization=False):
     onnx.checker.check_model(onnx_model)
 
 if __name__ == "__main__":
-    model_id = 99
+    model_id = 4
     model_path = config.config["save_model_path"] + f"/model_{model_id}.pth"
 
     export_to_onnx(model_path, model_id, False)
