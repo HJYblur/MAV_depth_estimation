@@ -64,17 +64,16 @@ class DepthDataset(Dataset):
         uyvy = torch.tensor(uyvy, dtype=torch.float32).unsqueeze(0) # 1 * H * W
         return uyvy
         
-        
     def load_image_array(self, path):
         img = Image.open(path).convert("RGB")
         return np.array(img) # H * W * 3 (rgb)
-
         
     def load_image_tensor(self, path, mode = "RGB", use_uint8=False):
         '''
             Load image from path and convert to tensor
         '''
         img = Image.open(path).convert(mode)
+        #img = img.resize((img.width // 2, img.height // 2), Image.ANTIALIAS)  # downsampling.
         if use_uint8: return T.PILToTensor()(img)
         return T.ToTensor()(img)
     
@@ -86,7 +85,6 @@ class DepthDataset(Dataset):
         if self.in_type_uint8: yuv = torch.tensor(yuv, dtype=torch.uint8)
         else: yuv = torch.tensor(yuv, dtype=torch.float32)
         return yuv
-    
 
     def downsample_image(self, img):
         if img.dim() == 2:  # If the image is (H, W), add a channel dimension
@@ -95,13 +93,12 @@ class DepthDataset(Dataset):
             pass
         else:
             raise ValueError(f"Input tensor must have 2 or 3 dimensions, but got {img.dim()} dimensions.")
- 
+
         # Downsample using average pooling with kernel_size=2 and stride=2
         img = img.unsqueeze(0)  # Add batch dimension for pooling: (1, C, H, W)
         img = F.avg_pool2d(img, kernel_size=self.downsample_fac, stride=self.downsample_fac)  # Shape: (1, C, H//2, W//2)
         img = img.squeeze(0)  # Remove batch dimension: (C, H//2, W//2)
         return img
-
 
     def extract_center_from_depthmatrix(self, depth_matrix):
         H, W = depth_matrix.shape
