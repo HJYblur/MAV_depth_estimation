@@ -37,7 +37,7 @@ def export_to_onnx(model_path, model_id, use_quantization=False):
     onnx.checker.check_model(onnx_model)
 
 if __name__ == "__main__":
-    model_id = 4
+    model_id = 15
     model_path = config.config["save_model_path"] + f"/model_{model_id}.pth"
 
     export_to_onnx(model_path, model_id, False)
