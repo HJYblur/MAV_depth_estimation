@@ -12,7 +12,7 @@ import h5py
 
 
 class DepthDataset(Dataset):
-    def __init__(self):
+    def __init__(self, transform):
         self.uyvy_path = config.config["uyvy_path"]
         self.yuv_path = config.config["yuv_path"]
         self.image_path = config.config["image_path"]
@@ -51,9 +51,8 @@ class DepthDataset(Dataset):
         return img, depth_vector
         
     def __len__(self):
-        # There's a hidden file called ".DS_store" (some mac thing) which means this method counts 1 more image
-        # if you don't do -1
-        return len(os.listdir(self.image_path)) - 1
+        # There's a hidden file called ".DS_store" (some mac thing)
+        return len([f for f in os.listdir(self.image_path) if f.endswith('.jpg')])
    
    
     def load_uyvy_tensor(self, path):
@@ -77,7 +76,7 @@ class DepthDataset(Dataset):
         if use_uint8: return T.PILToTensor()(img)
         return T.ToTensor()(img)
     
-    def load_yuv_tensor(self, path):
+    def load_yuv_tensor(self, path, transform):
         '''
             Load yuv image from path and convert to tensor
         '''
@@ -121,6 +120,7 @@ def extract_center_from_depthmap(batch_depth_map):
     # print(f"Extracted center depth shape: {downsampled_depth.shape}")
     return downsampled_depth
 
+
 def extract_depth_vector(depth_image, output_size):
     """
     Extracts a depth vector from the center column of a depth image.
@@ -154,9 +154,15 @@ def load_train_val_dataset():
     '''
         Load dataset from config file
     '''
-    dataset = DepthDataset()
+    train_transform = T.Compose([
+         T.RandomRotation(degrees=5),
+         T.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2)
+     ])
+    
+    dataset = DepthDataset(train_transform)
     ratio = config.config["train_val_split"]
     train_dataset, val_dataset = torch.utils.data.random_split(dataset, [ratio, 1 - ratio])
+ 
     train_dataloader = DataLoader(
         train_dataset, 
         batch_size=config.config["batch_size"], 

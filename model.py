@@ -53,7 +53,6 @@ class ShallowDepthModel(nn.Module):
         self.encoder2 = MobileNetBlock(16, 32)
         self.encoder3 = MobileNetBlock(32, 64)
         self.relu = nn.ReLU(inplace=True)
-        # self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.pool = nn.AvgPool2d(kernel_size=2, stride=2)
         # self.pool = nn.AdaptiveAvgPool2d(1,1) #If this works through ONNX, otherwise use line below
         # self.pool = nn.AvgPool2d(kernel_size=4, stride = 4)
@@ -79,29 +78,3 @@ class ShallowDepthModel(nn.Module):
     def compute_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
     
-
-class Mob3DepthModel(nn.Module):
-    def __init__(self, output_dim=16):
-        super(Mob3DepthModel, self).__init__()
-        self.output_channels = config.config["output_channels"]
-        
-        self.mobilenet = models.mobilenet_v3_small() # 2.5 million params :( Probably not usable 
-
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-
-        self.relu = nn.ReLU(inplace=True)
-
-        self.fc = nn.LazyLinear(self.output_channels)
-
-    def forward(self, x):
-        x = self.mobilenet(x)
-        # x = self.pool(x)
-
-        # x = torch.flatten(x, start_dim=1)
-        x = self.relu(x)
-        x = self.fc(x)
-
-        return x
-    
-    def compute_parameters(self):
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
