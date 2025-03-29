@@ -49,7 +49,7 @@ def init_logger():
     return logger
 
 
-def data_preprocess(h5_path, raw_image_path, append = True):
+def data_preprocess(h5_path, raw_image_path, append = False):
     '''
         Load depth matrix from h5 file and store as numpy, also store the original image
     '''
@@ -58,10 +58,9 @@ def data_preprocess(h5_path, raw_image_path, append = True):
     os.makedirs(depth_path, exist_ok=True)
     os.makedirs(image_path, exist_ok=True)
     
-    assert len(os.listdir(image_path)) == len(os.listdir(depth_path)), "Number of images and depth maps do not match"
+    # assert len(os.listdir(image_path)) == len(os.listdir(depth_path)), "Number of images and depth maps do not match"
     prev_index = len(os.listdir(depth_path)) if append else 0
     print(f"Previous index: {prev_index}")
-    # return
     
     raw_image_list = os.listdir(raw_image_path)
     with h5py.File(h5_path, "r") as f:
@@ -70,6 +69,7 @@ def data_preprocess(h5_path, raw_image_path, append = True):
             print(f"Processing {key}, index: {index}")
             depth_array = f[f[key].name][:]
             depth_array = depth_array / 255.0
+
             if key in raw_image_list:
                 # Rename the image file
                 os.rename(os.path.join(raw_image_path, key), os.path.join(image_path, f"image_{index:05d}.jpg"))
@@ -163,7 +163,8 @@ def convert_images_to_yuv(input_folder, output_folder):
         yuv = np.transpose(yuv, (2, 0, 1))
         yuv = yuv.astype(np.uint8)
 
-        np.save(os.path.join(output_folder, f"{base_name}.npy"), yuv)
+        np.save(os.path.join(output_folder, f"{base_name}.npy"), yuv, allow_pickle=False)
+        print(f"Saved {fname} as yuv")
 
 
 def depth_checker():
@@ -288,7 +289,7 @@ def show_eval_images(depth_pred, img, depth_gt):
 
 def show_eval_vectors(depth_pred, depth_gt, img, depth_img):
     img_rotated = np.transpose(np.rot90(img[0], k=1, axes=[1,2]), [1,2,0]) / 255
-    img_rotated = cv2.cvtColor(img_rotated, cv2.COLOR_YUV2RGB) # Convert back to RGB for display
+    img_rotated = np.clip(cv2.cvtColor(img_rotated, cv2.COLOR_YUV2RGB), 0, 1) # Convert back to RGB for display
 
     depth_img_rotated = np.rot90(depth_img, k=1)
 

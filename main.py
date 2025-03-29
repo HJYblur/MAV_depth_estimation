@@ -5,8 +5,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import config, utils, model, dataset
 import time
-from torch.quantization import quantize_dynamic
-import numpy as np
+import h5py
 
 def train():
     # Set up logging & device
@@ -82,7 +81,7 @@ def train():
     if logging_on:
         logger.info("Training complete.")
         writer.close()
-        
+
     print(f"Number of parameters: {depth_model.compute_parameters()}")
 
 
@@ -92,16 +91,13 @@ def eval(num_imgs, model_id=0):
     Pick some random input images and run depth estimation on it
     '''
     config.config["device"] = "cpu"
-    depth_path = config.config["depth_path"]
 
     # Load model
     model_path = config.config["save_model_path"] + f"/model_{model_id}.pth"
 
     depth_model = model.ShallowDepthModel()
-    # depth_model = model.Mob3DepthModel()
     depth_model.load_state_dict(torch.load(model_path, map_location=config.config["device"]))
     depth_model.eval()
-    # depth_model = quantize_dynamic(depth_model, dtype=torch.qint8)
  
     print(f"Number of parameters: {depth_model.compute_parameters()}")
 
@@ -114,15 +110,12 @@ def eval(num_imgs, model_id=0):
             # Run model
             start_time = time.time()
             depth_pred = depth_model(img)
+            print(depth_pred)
             print(f"Inference time: {time.time() - start_time:.2f} seconds")
 
-            # np.savetxt("/home/pietb/test_model/test_img.txt", img.numpy().reshape(-1), fmt="%.6f")
-
-            # print(f"Depth prediction: {depth_pred}")
-            # max_depth, max_indices = torch.max(depth_pred, dim=1)
-            # print(f"Predicted depth & position: {max_depth}, {max_indices / config.config['output_channels']}")
-
-            depth_img = np.load(os.path.join(depth_path, f"array_{random_indices[i]:05d}.npy"))
+            with h5py.File(config.config["h5_path"], "r") as f:
+                depth_img = f[list(f.keys())[random_indices[i]]][:]
+                depth_img = depth_img / 255.0
             
             utils.show_eval_vectors(depth_pred[0], depth_gt[0], img, depth_img)
 
@@ -148,7 +141,7 @@ if __name__ == "__main__":
         train()
 
     elif args.mode == "eval":
-        eval(num_imgs=1, model_id=args.model_id)
+        eval(num_imgs=5, model_id=args.model_id)
 
     else:
         h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5
