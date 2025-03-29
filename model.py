@@ -54,6 +54,9 @@ class ShallowDepthModel(nn.Module):
         self.encoder3 = MobileNetBlock(32, 64)
         self.relu = nn.ReLU(inplace=True)
         self.pool = nn.AvgPool2d(kernel_size=2, stride=2)
+        # self.pool = nn.AdaptiveAvgPool2d(1,1) #If this works through ONNX, otherwise use line below
+        # self.pool = nn.AvgPool2d(kernel_size=4, stride = 4)
+        self.dropout = nn.Dropout(p = 0.2)
         self.fc = nn.LazyLinear(self.output_channels)
         
     def forward(self, x):
@@ -69,6 +72,7 @@ class ShallowDepthModel(nn.Module):
         x = self.relu(x)
         x = self.dropout(x)
         x = self.fc(x)
+        x = self.relu(x)
         return x
     
     def compute_parameters(self):
