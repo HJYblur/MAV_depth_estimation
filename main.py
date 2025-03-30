@@ -118,6 +118,7 @@ def eval(num_imgs, model_id=0):
                 depth_img = depth_img / 255.0
             
             utils.show_eval_vectors(depth_pred[0], depth_gt[0], img, depth_img)
+    return
 
     
 if __name__ == "__main__":

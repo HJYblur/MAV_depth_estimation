@@ -179,7 +179,7 @@ def load_eval_dataset(num_imgs):
         Load num_imgs number of images for evaluation
     '''
     dataset = DepthDataset()
-    random_indices = random.sample(range(len(dataset)), num_imgs)
+    random_indices = random.sample(range(100), num_imgs)
     eval_dataset = torch.utils.data.Subset(dataset, random_indices)
 
     eval_data_loader = DataLoader(
