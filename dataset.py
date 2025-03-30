@@ -12,7 +12,7 @@ import h5py
 
 
 class DepthDataset(Dataset):
-    def __init__(self, transform):
+    def __init__(self):
         self.uyvy_path = config.config["uyvy_path"]
         self.yuv_path = config.config["yuv_path"]
         self.image_path = config.config["image_path"]
@@ -154,12 +154,8 @@ def load_train_val_dataset():
     '''
         Load dataset from config file
     '''
-    train_transform = T.Compose([
-         T.RandomRotation(degrees=5),
-         T.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2)
-     ])
     
-    dataset = DepthDataset(train_transform)
+    dataset = DepthDataset()
     ratio = config.config["train_val_split"]
     train_dataset, val_dataset = torch.utils.data.random_split(dataset, [ratio, 1 - ratio])
  

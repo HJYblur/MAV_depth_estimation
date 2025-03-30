@@ -123,7 +123,7 @@ def eval(num_imgs, model_id=0):
 if __name__ == "__main__":
     args = utils.parse_args()
     if args.mode == "data":
-        h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5
+        h5_path = os.path.join(config.config["h5_path"], args.h5file)
         original_image_path = config.config["image_path"]
         utils.data_preprocess(h5_path, config.config["raw_path"], append=args.add_data)
 
@@ -144,8 +144,4 @@ if __name__ == "__main__":
         eval(num_imgs=5, model_id=args.model_id)
 
     else:
-        h5_path = os.path.join(config.config["h5_path"], args.h5file) # flight_5_depthmap.h5
-        utils.h5_checker(h5_path)
-        # utils.depth_checker()
-        # utils.load_comparison()
-        # raise ValueError("Invalid mode. Please choose 'train' or 'eval'.")
+        utils.load_comparison()
