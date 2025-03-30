@@ -76,7 +76,7 @@ class DepthDataset(Dataset):
         if use_uint8: return T.PILToTensor()(img)
         return T.ToTensor()(img)
     
-    def load_yuv_tensor(self, path, transform):
+    def load_yuv_tensor(self, path):
         '''
             Load yuv image from path and convert to tensor
         '''
